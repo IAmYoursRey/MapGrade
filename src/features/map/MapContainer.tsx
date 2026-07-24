@@ -3,10 +3,15 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useMapStore } from '@/store/useMapStore';
 
-const MAP_LAYERS = {
-  DARK: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', // Tema gelap standar startup
+const MAP_LAYERS: Record<string, string> = {
+  dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+  DARK: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+  streets: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+  street: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
   STREET: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+  satellite: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
   SATELLITE: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  heatmap: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
 };
 
 export const MapContainer: React.FC = () => {
@@ -15,7 +20,11 @@ export const MapContainer: React.FC = () => {
   const markersLayer = useRef<L.LayerGroup | null>(null);
   const currentTileLayer = useRef<L.TileLayer | null>(null);
   
-  const { reports, activeCategory, activeLayer, setSelectedReportId } = useMapStore();
+  const store = useMapStore();
+  const reports = store.reports || [];
+  const activeCategory = store.activeCategory || store.filterCategory || 'ALL';
+  const activeLayer = store.activeLayer || 'dark';
+  const setSelectedReportId = store.setSelectedReportId || store.setSelectedReport || (() => {});
 
   // 1. Inisialisasi Peta
   useEffect(() => {
@@ -25,7 +34,7 @@ export const MapContainer: React.FC = () => {
     leafletMap.current = L.map(mapRef.current, {
       center: [-0.7893, 113.9213], 
       zoom: 5,
-      zoomControl: false, // Kita sembunyikan default zoom untuk UI yang lebih bersih
+      zoomControl: false,
     });
 
     // Tambahkan kontrol zoom ke posisi kanan atas
@@ -39,7 +48,7 @@ export const MapContainer: React.FC = () => {
     };
   }, []);
 
-  // 2. Sinkronisasi Base Layer Peta
+  // 2. Sinkronisasi Base Layer Peta (Safe Fallback)
   useEffect(() => {
     if (!leafletMap.current) return;
 
@@ -47,7 +56,9 @@ export const MapContainer: React.FC = () => {
       leafletMap.current.removeLayer(currentTileLayer.current);
     }
 
-    currentTileLayer.current = L.tileLayer(MAP_LAYERS[activeLayer], {
+    const tileUrl = MAP_LAYERS[activeLayer] || MAP_LAYERS.dark;
+
+    currentTileLayer.current = L.tileLayer(tileUrl, {
       attribution: '&copy; OpenStreetMap contributors & GoSiaga',
       maxZoom: 19,
     }).addTo(leafletMap.current);
@@ -64,7 +75,6 @@ export const MapContainer: React.FC = () => {
       : reports.filter(r => r.category === activeCategory);
 
     filteredReports.forEach((report) => {
-      // CSS Class "marker-glowing-red" diambil dari globals.css
       const glowingIcon = L.divIcon({
         className: 'bg-transparent',
         html: `<div class="w-4 h-4 bg-red-500 rounded-full marker-glowing-red border-2 border-white"></div>`,
@@ -74,9 +84,10 @@ export const MapContainer: React.FC = () => {
 
       const marker = L.marker([report.latitude, report.longitude], { icon: glowingIcon });
 
-      // Animasi Radio Garden Style saat diklik
       marker.on('click', () => {
-        setSelectedReportId(report.id);
+        if (typeof setSelectedReportId === 'function') {
+          setSelectedReportId(report.id);
+        }
         leafletMap.current?.flyTo([report.latitude, report.longitude], 14, {
           duration: 1.5,
           easeLinearity: 0.25,

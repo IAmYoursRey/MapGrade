@@ -12,9 +12,13 @@ export const InteractiveMap: React.FC = () => {
   const { reports, setSelectedReport, activeLayer, setActiveLayer } = useMapStore();
   const [showLayerSelector, setShowLayerSelector] = useState(false);
 
-  // Map Tile Providers
-  const tileUrls: Record<MapLayerType, { url: string; attr: string }> = {
+  // Map Tile Providers (dengan penanganan huruf besar & kecil + fallback)
+  const tileUrls: Record<string, { url: string; attr: string }> = {
     dark: {
+      url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+      attr: '&copy; CartoDB'
+    },
+    DARK: {
       url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
       attr: '&copy; CartoDB'
     },
@@ -22,7 +26,15 @@ export const InteractiveMap: React.FC = () => {
       url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
       attr: '&copy; OpenStreetMap'
     },
+    STREET: {
+      url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      attr: '&copy; OpenStreetMap'
+    },
     satellite: {
+      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      attr: '&copy; Esri'
+    },
+    SATELLITE: {
       url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
       attr: '&copy; Esri'
     },
@@ -31,6 +43,8 @@ export const InteractiveMap: React.FC = () => {
       attr: '&copy; CartoDB Heat'
     }
   };
+
+  const currentTile = tileUrls[activeLayer] || tileUrls.dark;
 
   // Status Marker Colors
   const getMarkerColor = (status: ReportStatus) => {
@@ -53,8 +67,8 @@ export const InteractiveMap: React.FC = () => {
       zoomControl: false
     });
 
-    L.tileLayer(tileUrls[activeLayer].url, {
-      attribution: tileUrls[activeLayer].attr
+    L.tileLayer(currentTile.url, {
+      attribution: currentTile.attr
     }).addTo(leafletMap.current);
 
     return () => {
@@ -71,8 +85,8 @@ export const InteractiveMap: React.FC = () => {
         leafletMap.current?.removeLayer(layer);
       }
     });
-    L.tileLayer(tileUrls[activeLayer].url, {
-      attribution: tileUrls[activeLayer].attr
+    L.tileLayer(currentTile.url, {
+      attribution: currentTile.attr
     }).addTo(leafletMap.current);
   }, [activeLayer]);
 
@@ -124,7 +138,7 @@ export const InteractiveMap: React.FC = () => {
     <div className="relative w-full h-full">
       <div ref={mapRef} className="w-full h-full z-0 bg-slate-900" />
 
-      {/* Floating Layer Selector Button (Google Maps Style) */}
+      {/* Floating Layer Selector Button */}
       <div className="absolute top-6 right-6 z-[1000]">
         <button
           onClick={() => setShowLayerSelector(!showLayerSelector)}
