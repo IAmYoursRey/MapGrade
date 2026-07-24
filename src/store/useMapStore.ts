@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 import { getDeviceId } from '@/utils/deviceId';
 
 export type ReportStatus = 'UNVERIFIED' | 'VERIFIED_CROWD' | 'NEEDS_REVIEW' | 'IN_PROGRESS' | 'RESOLVED' | 'ARCHIVED';
-export type MapLayerType = 'dark' | 'streets' | 'satellite' | 'heatmap';
+export type MapLayerType = 'dark' | 'streets' | 'satellite' | 'heatmap' | 'DARK' | 'STREET' | 'SATELLITE';
 
 export interface CommentItem {
   id: string;
@@ -41,15 +41,19 @@ export interface Report {
 interface MapStore {
   reports: Report[];
   selectedReport: Report | null;
+  selectedReportId: string | null;
   activeLayer: MapLayerType;
   filterCategory: string;
+  activeCategory: string;
   isCreateModalOpen: boolean;
   isNotificationOpen: boolean;
   
   // Actions
   setSelectedReport: (report: Report | null) => void;
+  setSelectedReportId: (id: string | null) => void;
   setActiveLayer: (layer: MapLayerType) => void;
   setFilterCategory: (category: string) => void;
+  setActiveCategory: (category: string) => void;
   setCreateModalOpen: (isOpen: boolean) => void;
   setNotificationOpen: (isOpen: boolean) => void;
   
@@ -61,7 +65,7 @@ interface MapStore {
 
 export const useMapStore = create<MapStore>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       reports: [
         {
           id: 'rep-1',
@@ -102,14 +106,24 @@ export const useMapStore = create<MapStore>()(
         }
       ],
       selectedReport: null,
+      selectedReportId: null,
       activeLayer: 'dark',
       filterCategory: 'ALL',
+      activeCategory: 'ALL',
       isCreateModalOpen: false,
       isNotificationOpen: false,
 
-      setSelectedReport: (report) => set({ selectedReport: report }),
+      setSelectedReport: (report) => set({ 
+        selectedReport: report, 
+        selectedReportId: report ? report.id : null 
+      }),
+      setSelectedReportId: (id) => set((state) => ({
+        selectedReportId: id,
+        selectedReport: id ? state.reports.find((r) => r.id === id) || null : null
+      })),
       setActiveLayer: (layer) => set({ activeLayer: layer }),
-      setFilterCategory: (category) => set({ filterCategory: category }),
+      setFilterCategory: (category) => set({ filterCategory: category, activeCategory: category }),
+      setActiveCategory: (category) => set({ filterCategory: category, activeCategory: category }),
       setCreateModalOpen: (isOpen) => set({ isCreateModalOpen: isOpen }),
       setNotificationOpen: (isOpen) => set({ isNotificationOpen: isOpen }),
 
@@ -134,6 +148,7 @@ export const useMapStore = create<MapStore>()(
         set((state) => ({
           reports: [newReport, ...state.reports],
           selectedReport: newReport,
+          selectedReportId: newReport.id,
           isCreateModalOpen: false
         }));
       },

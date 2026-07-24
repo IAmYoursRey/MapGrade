@@ -9,7 +9,7 @@ export const InteractiveMap: React.FC = () => {
   const leafletMap = useRef<L.Map | null>(null);
   const markersRef = useRef<{ [id: string]: L.Marker }>({});
 
-  const { reports, selectedReport, setSelectedReport, activeLayer, setActiveLayer } = useMapStore();
+  const { reports, setSelectedReport, activeLayer, setActiveLayer } = useMapStore();
   const [showLayerSelector, setShowLayerSelector] = useState(false);
 
   // Map Tile Providers

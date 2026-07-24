@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useMapStore, ReportStatus } from '@/store/useMapStore';
 import { StatusBadge } from '@/components/common/StatusBadge';
-import { AlertTriangle, Clock, CheckCircle2 } from 'lucide-react';
+import { AlertTriangle, Clock } from 'lucide-react';
 
 export const BpbdDashboard: React.FC = () => {
   const { reports, updateReportStatus } = useMapStore();
