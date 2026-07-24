@@ -1,50 +1,36 @@
 import React from 'react';
-import { AlertTriangle, Layers } from 'lucide-react';
-import { MapContainer } from '@/features/map/MapContainer';
-import { CategoryFilterPills } from '@/components/map/CategoryFilterPills';
+import { InteractiveMap } from '@/features/map/InteractiveMap';
+import { ReportFormModal } from '@/features/report/ReportFormModal';
+import { ReportDrawer } from '@/features/report/ReportDrawer';
 import { useMapStore } from '@/store/useMapStore';
+import { Plus } from 'lucide-react';
 
 export const MapPage: React.FC = () => {
-  const { activeLayer, setActiveLayer } = useMapStore();
-
-  const toggleMapLayer = () => {
-    const nextLayer = activeLayer === 'DARK' ? 'SATELLITE' 
-                    : activeLayer === 'SATELLITE' ? 'STREET' 
-                    : 'DARK';
-    setActiveLayer(nextLayer);
-  };
+  const { setIsFormOpen } = useMapStore();
 
   return (
-    <div className="relative w-full h-[calc(100vh-64px)] overflow-hidden">
-      {/* Inti Peta Leaflet */}
-      <MapContainer />
+    <div className="relative w-full h-[calc(100vh-64px)] overflow-hidden bg-slate-950">
+      
+      {/* 1. Komponen Peta Utama */}
+      <InteractiveMap />
 
-      {/* Panel Navigasi Mengambang (Kiri) */}
-      <CategoryFilterPills />
-
-      {/* Layer Toggle (Kanan Bawah) */}
-      <button 
-        onClick={toggleMapLayer}
-        className="absolute bottom-6 right-6 z-[1000] flex items-center justify-center p-3 rounded-xl bg-white/10 dark:bg-slate-900/60 backdrop-blur-md border border-white/20 shadow-xl text-slate-800 dark:text-white hover:bg-white/30 transition-all hover:scale-105"
-        title="Ubah Mode Peta"
+      {/* 2. Tombol Floating Action Button (Lapor Bencana) */}
+      <button
+        onClick={() => setIsFormOpen(true)}
+        className="fixed bottom-8 right-8 z-[1500] px-6 py-4 bg-red-600 hover:bg-red-500 text-white rounded-full font-black text-sm shadow-2xl shadow-red-600/50 flex items-center gap-3 transition-all hover:scale-105 active:scale-95 border-2 border-white/20"
       >
-        <Layers className="w-6 h-6" />
+        <Plus className="w-6 h-6 stroke-[3]" />
+        <span>LAPOR BENCANA</span>
       </button>
 
-      {/* Tombol Lapor Darurat (Tengah Bawah) */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-[1000]">
-        <button 
-          className="group relative flex items-center gap-3 px-8 py-4 rounded-full bg-red-600 hover:bg-red-700 text-white font-bold text-lg shadow-[0_0_20px_rgba(229,57,53,0.5)] transition-all hover:scale-105 active:scale-95 border-2 border-red-400/50"
-        >
-          <AlertTriangle className="w-6 h-6 group-hover:animate-pulse" />
-          LAPOR DARURAT
-          
-          {/* Efek ping animasi di belakang tombol */}
-          <span className="absolute w-full h-full rounded-full bg-red-500 opacity-20 group-hover:animate-ping -z-10" />
-        </button>
-      </div>
+      {/* 3. Modal Form Laporan (Triggered saat setIsFormOpen(true)) */}
+      <ReportFormModal />
 
-      {/* TODO Tahap Berikutnya: Letakkan komponen <ReportDrawer /> di sini saat sebuah titik diklik */}
+      {/* 4. Drawer Detail Laporan & Komentar (Triggered saat marker diklik) */}
+      <ReportDrawer />
+
     </div>
   );
 };
+
+export default MapPage;

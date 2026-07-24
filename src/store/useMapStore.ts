@@ -1,21 +1,21 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { getDeviceId } from '@/utils/deviceId';
 
-export type ReportStatus = 'UNVERIFIED' | 'VERIFIED_CROWD' | 'NEEDS_REVIEW' | 'IN_PROGRESS' | 'RESOLVED' | 'ARCHIVED';
-export type MapLayerType = 'dark' | 'streets' | 'satellite' | 'heatmap' | 'DARK' | 'STREET' | 'SATELLITE';
+export type ReportStatus = 'UNVERIFIED' | 'NEEDS_REVIEW' | 'IN_PROGRESS' | 'RESOLVED' | 'ARCHIVED';
+export type MapLayerType = 'dark' | 'streets' | 'satellite' | 'heatmap';
 
-export interface CommentItem {
+export interface Comment {
   id: string;
-  author: string;
+  authorId: string; // Contoh: "Reporter #4821"
   text: string;
   createdAt: string;
-  mediaUrl?: string;
+  likes: number;
 }
 
-export interface TimelineEvent {
-  time: string;
+export interface TimelineItem {
+  id: string;
   title: string;
+  time: string;
+  status: string;
   description: string;
 }
 
@@ -27,214 +27,183 @@ export interface Report {
   latitude: number;
   longitude: number;
   status: ReportStatus;
-  validVotes: number;
-  invalidVotes: number;
   createdAt: string;
-  reporterName: string;
-  mediaUrl?: string;
-  videoUrl?: string;
-  victimCount?: string;
-  comments: CommentItem[];
-  timeline: TimelineEvent[];
+  photos?: string[];
+  videos?: string[];
+  casualties?: number;
+  damage?: string;
+  contactPhone?: string;
+  upvotes: number;
+  validationsCount: number;
+  commentsCount: number;
+  comments?: Comment[];
+  timeline?: TimelineItem[];
+  aiSummary?: string;
 }
+
+// Helper untuk mengambil/membuat Device ID permanen di localStorage
+export const getDeviceId = (): string => {
+  let deviceId = localStorage.getItem('gosiaga_device_id');
+  if (!deviceId) {
+    const randomNum = Math.floor(1000 + Math.random() * 9000);
+    deviceId = `Reporter #${randomNum}`;
+    localStorage.setItem('gosiaga_device_id', deviceId);
+  }
+  return deviceId;
+};
 
 interface MapStore {
   reports: Report[];
   selectedReport: Report | null;
-  selectedReportId: string | null;
+  isFormOpen: boolean;
+  isDrawerOpen: boolean;
   activeLayer: MapLayerType;
-  filterCategory: string;
   activeCategory: string;
-  isCreateModalOpen: boolean;
-  isNotificationOpen: boolean;
-  
+
   // Actions
   setSelectedReport: (report: Report | null) => void;
   setSelectedReportId: (id: string | null) => void;
+  setIsFormOpen: (open: boolean) => void;
+  setIsDrawerOpen: (open: boolean) => void;
   setActiveLayer: (layer: MapLayerType) => void;
-  setFilterCategory: (category: string) => void;
-  setActiveCategory: (category: string) => void;
-  setCreateModalOpen: (isOpen: boolean) => void;
-  setNotificationOpen: (isOpen: boolean) => void;
-  
-  addReport: (newReport: Omit<Report, 'id' | 'createdAt' | 'validVotes' | 'invalidVotes' | 'status' | 'comments' | 'timeline'>) => void;
-  addComment: (reportId: string, text: string, mediaUrl?: string) => void;
-  updateReportStatus: (reportId: string, status: ReportStatus) => void;
-  voteReport: (reportId: string, isValid: boolean) => void;
+  setActiveCategory: (cat: string) => void;
+  addReport: (report: Report) => void;
+  addComment: (reportId: string, text: string) => void;
+  toggleUpvote: (reportId: string) => void;
 }
 
-export const useMapStore = create<MapStore>()(
-  persist(
-    (set) => ({
-      reports: [
-        {
-          id: 'rep-1',
-          title: 'Banjir Luapan Sungai Ahmad Yani',
-          category: 'BANJIR',
-          description: 'Ketinggian air mencapai 60cm akibat hujan deras sejak pagi.',
-          latitude: -7.2891,
-          longitude: 112.7344,
-          status: 'UNVERIFIED',
-          validVotes: 12,
-          invalidVotes: 1,
-          createdAt: new Date(Date.now() - 3000000).toISOString(),
-          reporterName: 'Reporter #8812',
-          comments: [
-            { id: 'c-1', author: 'Reporter #4821', text: 'Air mulai masuk ke pemukiman RT 04.', createdAt: '10 menit lalu' }
-          ],
-          timeline: [
-            { time: '13:20', title: 'Laporan Dibuat', description: 'Warga melaporkan genangan air.' }
-          ]
-        },
-        {
-          id: 'rep-2',
-          title: 'Pohon Tumbang Menutup Jalan',
-          category: 'POHON_TUMBANG',
-          description: 'Akses kendaraan roda 4 terputus total.',
-          latitude: -7.2758,
-          longitude: 112.7481,
-          status: 'IN_PROGRESS',
-          validVotes: 34,
-          invalidVotes: 0,
-          createdAt: new Date(Date.now() - 7200000).toISOString(),
-          reporterName: 'Relawan #102',
-          comments: [],
-          timeline: [
-            { time: '11:00', title: 'Laporan Dibuat', description: 'Pohon tumbang akibat angin kencang.' },
-            { time: '11:30', title: 'Tim BPBD Meluncur', description: 'Tim evakuasi membawa gergaji mesin.' }
-          ]
-        }
-      ],
-      selectedReport: null,
-      selectedReportId: null,
-      activeLayer: 'dark',
-      filterCategory: 'ALL',
-      activeCategory: 'ALL',
-      isCreateModalOpen: false,
-      isNotificationOpen: false,
+// Dummy Data Awal
+const INITIAL_REPORTS: Report[] = [
+  {
+    id: 'rep-1',
+    title: 'Banjir Luapan Sungai Kalimas',
+    category: 'BANJIR',
+    description: 'Ketinggian air mencapai 80cm di jalan pemukiman. Kendaraan roda dua tidak dapat melintas.',
+    latitude: -7.2575,
+    longitude: 112.7521,
+    status: 'IN_PROGRESS',
+    createdAt: new Date().toISOString(),
+    photos: ['https://images.unsplash.com/photo-1547683905-f686c993aae5?auto=format&fit=crop&q=80&w=800'],
+    casualties: 0,
+    damage: '12 Rumah Terendam',
+    contactPhone: '081234567890',
+    upvotes: 24,
+    validationsCount: 15,
+    commentsCount: 2,
+    aiSummary: '⚡ **Ringkasan AI**: Potensi luapan air memuncak hingga malam hari. Hindari lintasan Jalan Kalimas dan gunakan jalur alternatif barat.',
+    timeline: [
+      { id: 't1', title: 'Laporan Dibuat', time: '10:00 WIB', status: 'UNVERIFIED', description: 'Pelapor mengirimkan laporan bencana awal.' },
+      { id: 't2', title: 'Diverifikasi Warga', time: '10:15 WIB', status: 'NEEDS_REVIEW', description: '5 Warga sekitar mengonfirmasi kebenaran foto.' },
+      { id: 't3', title: 'Tim BPBD Meluncur', time: '10:40 WIB', status: 'IN_PROGRESS', description: 'Regu penanggulangan BPBD dalam perjalanan lokasi.' },
+    ],
+    comments: [
+      { id: 'c1', authorId: 'Reporter #1092', text: 'Air mulai naik drastis sejak jam 9 pagi tadi.', createdAt: '10:10 WIB', likes: 4 },
+      { id: 'c2', authorId: 'Reporter #8831', text: 'Perahu karet BPBD sudah ada di lokasi perempatan.', createdAt: '10:45 WIB', likes: 7 },
+    ]
+  },
+  {
+    id: 'rep-2',
+    title: 'Pohon Tumbang Menutup Jalan',
+    category: 'ANGIN_PUTING_BELIUNG',
+    description: 'Pohon peneduh jalan berukuran besar tumbang menutup total akses kendaraan.',
+    latitude: -7.2800,
+    longitude: 112.7300,
+    status: 'UNVERIFIED',
+    createdAt: new Date().toISOString(),
+    photos: ['https://images.unsplash.com/photo-1516426122078-c23e76319801?auto=format&fit=crop&q=80&w=800'],
+    casualties: 0,
+    damage: 'Kabel listrik putus',
+    upvotes: 5,
+    validationsCount: 3,
+    commentsCount: 1,
+    aiSummary: '⚡ **Ringkasan AI**: Akses lalu lintas terputus total. Petugas Dinas Kebersihan sedang dikontak.',
+    timeline: [
+      { id: 't1', title: 'Laporan Dibuat', time: '11:20 WIB', status: 'UNVERIFIED', description: 'Laporan baru diterima dari warga.' }
+    ],
+    comments: [
+      { id: 'c1', authorId: 'Reporter #4821', text: 'Macet panjang dari arah stasiun.', createdAt: '11:25 WIB', likes: 2 }
+    ]
+  }
+];
 
-      setSelectedReport: (report) => set({ 
-        selectedReport: report, 
-        selectedReportId: report ? report.id : null 
-      }),
-      setSelectedReportId: (id) => set((state) => ({
-        selectedReportId: id,
-        selectedReport: id ? state.reports.find((r) => r.id === id) || null : null
-      })),
-      setActiveLayer: (layer) => set({ activeLayer: layer }),
-      setFilterCategory: (category) => set({ filterCategory: category, activeCategory: category }),
-      setActiveCategory: (category) => set({ filterCategory: category, activeCategory: category }),
-      setCreateModalOpen: (isOpen) => set({ isCreateModalOpen: isOpen }),
-      setNotificationOpen: (isOpen) => set({ isNotificationOpen: isOpen }),
+export const useMapStore = create<MapStore>((set, get) => ({
+  reports: INITIAL_REPORTS,
+  selectedReport: null,
+  isFormOpen: false,
+  isDrawerOpen: false,
+  activeLayer: 'dark',
+  activeCategory: 'ALL',
 
-      addReport: (data) => {
-        const newReport: Report = {
-          ...data,
-          id: `rep-${Date.now()}`,
-          status: 'UNVERIFIED',
-          validVotes: 1,
-          invalidVotes: 0,
-          createdAt: new Date().toISOString(),
-          comments: [],
-          timeline: [
-            {
-              time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-              title: 'Laporan Dibuat',
-              description: 'Laporan telah terdaftar di sistem GoSiaga.'
-            }
-          ]
-        };
-
-        set((state) => ({
-          reports: [newReport, ...state.reports],
-          selectedReport: newReport,
-          selectedReportId: newReport.id,
-          isCreateModalOpen: false
-        }));
-      },
-
-      addComment: (reportId, text, mediaUrl) => {
-        const deviceId = getDeviceId();
-        const newComment: CommentItem = {
-          id: `c-${Date.now()}`,
-          author: deviceId,
-          text,
-          mediaUrl,
-          createdAt: 'Baru saja'
-        };
-
-        set((state) => {
-          const updatedReports = state.reports.map((r) => {
-            if (r.id === reportId) {
-              return {
-                ...r,
-                comments: [...r.comments, newComment]
-              };
-            }
-            return r;
-          });
-
-          const currentSelected = state.selectedReport?.id === reportId 
-            ? updatedReports.find(r => r.id === reportId) || null 
-            : state.selectedReport;
-
-          return { reports: updatedReports, selectedReport: currentSelected };
-        });
-      },
-
-      updateReportStatus: (reportId, newStatus) => {
-        set((state) => {
-          const statusLabels: Record<ReportStatus, string> = {
-            UNVERIFIED: 'Belum Diverifikasi',
-            VERIFIED_CROWD: 'Diverifikasi Warga',
-            NEEDS_REVIEW: 'Perlu Investigasi',
-            IN_PROGRESS: 'Penanganan BPBD',
-            RESOLVED: 'Selesai / Teratasi',
-            ARCHIVED: 'Diarsipkan'
-          };
-
-          const updatedReports = state.reports.map((r) => {
-            if (r.id === reportId) {
-              const newTimelineEvent = {
-                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                title: `Status: ${statusLabels[newStatus]}`,
-                description: `Perubahan status oleh Komando BPBD.`
-              };
-              return {
-                ...r,
-                status: newStatus,
-                timeline: [newTimelineEvent, ...r.timeline]
-              };
-            }
-            return r;
-          });
-
-          const currentSelected = state.selectedReport?.id === reportId 
-            ? updatedReports.find(r => r.id === reportId) || null 
-            : state.selectedReport;
-
-          return { reports: updatedReports, selectedReport: currentSelected };
-        });
-      },
-
-      voteReport: (reportId, isValid) => {
-        set((state) => {
-          const updatedReports = state.reports.map((r) => {
-            if (r.id === reportId) {
-              return {
-                ...r,
-                validVotes: isValid ? r.validVotes + 1 : r.validVotes,
-                invalidVotes: !isValid ? r.invalidVotes + 1 : r.invalidVotes
-              };
-            }
-            return r;
-          });
-          return { reports: updatedReports };
-        });
-      }
-    }),
-    {
-      name: 'gosiaga-reactive-storage'
+  setSelectedReport: (report) => set({ selectedReport: report }),
+  setSelectedReportId: (id) => {
+    if (!id) {
+      set({ selectedReport: null });
+      return;
     }
-  )
-);
+    const found = get().reports.find((r) => r.id === id) || null;
+    set({ selectedReport: found });
+  },
+  setIsFormOpen: (open) => set({ isFormOpen: open }),
+  setIsDrawerOpen: (open) => set({ isDrawerOpen: open }),
+  setActiveLayer: (layer) => set({ activeLayer: layer }),
+  setActiveCategory: (cat) => set({ activeCategory: cat }),
+
+  addReport: (newReport) => set((state) => ({ 
+    reports: [newReport, ...state.reports] 
+  })),
+
+  addComment: (reportId, text) => {
+    const authorId = getDeviceId();
+    const newComment: Comment = {
+      id: `c-${Date.now()}`,
+      authorId,
+      text,
+      createdAt: 'Baru saja',
+      likes: 0,
+    };
+
+    set((state) => ({
+      reports: state.reports.map((r) => {
+        if (r.id === reportId) {
+          const updatedComments = [...(r.comments || []), newComment];
+          const updatedTimeline = [
+            ...(r.timeline || []),
+            {
+              id: `t-${Date.now()}`,
+              title: `Komentar baru dari ${authorId}`,
+              time: 'Baru saja',
+              status: r.status,
+              description: text
+            }
+          ];
+          const updatedReport = {
+            ...r,
+            comments: updatedComments,
+            commentsCount: updatedComments.length,
+            timeline: updatedTimeline,
+          };
+          if (state.selectedReport?.id === reportId) {
+            set({ selectedReport: updatedReport });
+          }
+          return updatedReport;
+        }
+        return r;
+      }),
+    }));
+  },
+
+  toggleUpvote: (reportId) => {
+    set((state) => ({
+      reports: state.reports.map((r) => {
+        if (r.id === reportId) {
+          const updated = { ...r, upvotes: r.upvotes + 1, validationsCount: r.validationsCount + 1 };
+          if (state.selectedReport?.id === reportId) {
+            set({ selectedReport: updated });
+          }
+          return updated;
+        }
+        return r;
+      }),
+    }));
+  }
+}));
