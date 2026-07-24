@@ -1,223 +1,419 @@
-import React, { useState } from 'react';
-import { useMapStore } from '@/store/useMapStore';
-import { getDeviceId } from '@/utils/deviceId';
-import { MapPin, Camera, Video, AlertTriangle, X, Loader2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useMapStore, Report } from '@/store/useMapStore';
+import { 
+  X, 
+  MapPin, 
+  Camera, 
+  Video, 
+  AlertTriangle, 
+  Loader2, 
+  CheckCircle2, 
+  Upload, 
+  Trash2 
+} from 'lucide-react';
 
-export const CreateReportModal: React.FC = () => {
-  const { isCreateModalOpen, setCreateModalOpen, addReport } = useMapStore();
+export const ReportFormModal: React.FC = () => {
+  const { isFormOpen, setIsFormOpen, addReport } = useMapStore();
 
+  // State Form (Hanya title yang wajib)
   const [title, setTitle] = useState('');
-  const [category, setCategory] = useState('BANJIR');
+  const [category, setCategory] = useState<Report['category']>('BANJIR');
   const [description, setDescription] = useState('');
-  const [victimCount, setVictimCount] = useState('');
-  
+  const [casualties, setCasualties] = useState('');
+  const [damage, setDamage] = useState('');
+  const [contact, setContact] = useState('');
+
+  // State GPS & Lokasi
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
-  const [isLocating, setIsLocating] = useState(false);
-  const [mediaPreview, setMediaPreview] = useState<string | null>(null);
-  const [videoPreview, setVideoPreview] = useState<string | null>(null);
+  const [gpsStatus, setGpsStatus] = useState<'idle' | 'loading' | 'success' | 'denied'>('idle');
+  const [gpsErrorMsg, setGpsErrorMsg] = useState('');
 
-  if (!isCreateModalOpen) return null;
+  // State Media Upload
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [videos, setVideos] = useState<string[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
-  // Handler GPS Otomatis
-  const handleGetLocation = () => {
-    setIsLocating(true);
-    if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-          setIsLocating(false);
-        },
-        () => {
-          // Fallback jika GPS ditolak/offline: Lokasi Surabaya pusat
-          setCoords({ lat: -7.2575, lng: 112.7521 });
-          setIsLocating(false);
-        },
-        { enableHighAccuracy: true }
-      );
+  // 1. Minta Izin GPS Otomatis saat Modal Dibuka
+  useEffect(() => {
+    if (isFormOpen) {
+      requestLocation();
     } else {
-      setCoords({ lat: -7.2575, lng: 112.7521 });
-      setIsLocating(false);
+      resetForm();
     }
+  }, [isFormOpen]);
+
+  const requestLocation = () => {
+    setGpsStatus('loading');
+    setGpsErrorMsg('');
+
+    if (!navigator.geolocation) {
+      setGpsStatus('denied');
+      setGpsErrorMsg('Browser Anda tidak mendukung fitur Geolocation GPS.');
+      setCoords({ lat: -7.2575, lng: 112.7521 }); // Fallback default (Surabaya)
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setCoords({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        });
+        setGpsStatus('success');
+      },
+      (error) => {
+        setGpsStatus('denied');
+        setCoords({ lat: -7.2575, lng: 112.7521 }); // Fallback jika ditolak
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            setGpsErrorMsg('Izin GPS ditolak. Menggunakan lokasi default peta.');
+            break;
+          case error.POSITION_UNAVAILABLE:
+            setGpsErrorMsg('Sinyal GPS tidak ditemukan.');
+            break;
+          default:
+            setGpsErrorMsg('Gagal mengambil lokasi GPS.');
+            break;
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
   };
 
-  // Preview Foto
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setMediaPreview(URL.createObjectURL(file));
-    }
+  // 2. Simulasi Upload Foto/Gambar
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsUploading(true);
+    setUploadProgress(20);
+
+    // Simulasi Progress Upload
+    const timer = setInterval(() => {
+      setUploadProgress((prev) => {
+        if (prev >= 100) {
+          clearInterval(timer);
+          setIsUploading(false);
+          
+          // Konversi ke Object URL untuk Preview
+          const newPhotos = Array.from(files).map((file) => URL.createObjectURL(file));
+          setPhotos((prevPhotos) => [...prevPhotos, ...newPhotos]);
+          return 0;
+        }
+        return prev + 40;
+      });
+    }, 200);
   };
 
-  // Preview Video
-  const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setVideoPreview(URL.createObjectURL(file));
-    }
+  // 3. Simulasi Upload Video
+  const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsUploading(true);
+    setUploadProgress(30);
+
+    const timer = setInterval(() => {
+      setUploadProgress((prev) => {
+        if (prev >= 100) {
+          clearInterval(timer);
+          setIsUploading(false);
+
+          const newVideos = Array.from(files).map((file) => URL.createObjectURL(file));
+          setVideos((prevVideos) => [...prevVideos, ...newVideos]);
+          return 0;
+        }
+        return prev + 35;
+      });
+    }, 300);
   };
 
+  // 4. Submit Form
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) return;
 
-    // Gunakan posisi terdeteksi atau default lokasi
-    const finalLat = coords ? coords.lat : -7.2575 + (Math.random() - 0.5) * 0.05;
-    const finalLng = coords ? coords.lng : 112.7521 + (Math.random() - 0.5) * 0.05;
+    if (!title.trim()) {
+      alert('Judul bencana wajib diisi!');
+      return;
+    }
 
-    addReport({
-      title,
-      category,
-      description: description || 'Tidak ada deskripsi tambahan.',
-      latitude: finalLat,
-      longitude: finalLng,
-      reporterName: getDeviceId(),
-      mediaUrl: mediaPreview || undefined,
-      videoUrl: videoPreview || undefined,
-      victimCount: victimCount || undefined
-    });
+    const newReport: Partial<Report> = {
+      id: `report-${Date.now()}`,
+      title: title.trim(),
+      category: category || 'LAINNYA',
+      description: description.trim() || 'Tidak ada deskripsi tambahan.',
+      latitude: coords?.lat || -7.2575,
+      longitude: coords?.lng || 112.7521,
+      status: 'UNVERIFIED', // status default: 🔴 Baru
+      createdAt: new Date().toISOString(),
+      photos: photos.length > 0 ? photos : ['https://images.unsplash.com/photo-1547683905-f686c993aae5?auto=format&fit=crop&q=80&w=800'],
+      videos: videos,
+      casualties: casualties ? parseInt(casualties) : 0,
+      damage: damage || '-',
+      contactPhone: contact || '-',
+      upvotes: 1,
+      validationsCount: 1,
+      commentsCount: 0,
+    };
 
-    // Reset Form
-    setTitle('');
-    setDescription('');
-    setMediaPreview(null);
-    setVideoPreview(null);
-    setCoords(null);
+    if (addReport) {
+      addReport(newReport as Report);
+    }
+
+    alert('Laporan bencana berhasil dikirim!');
+    setIsFormOpen(false);
+    resetForm();
   };
 
+  const resetForm = () => {
+    setTitle('');
+    setCategory('BANJIR');
+    setDescription('');
+    setCasualties('');
+    setDamage('');
+    setContact('');
+    setPhotos([]);
+    setVideos([]);
+    setGpsStatus('idle');
+  };
+
+  if (!isFormOpen) return null;
+
   return (
-    <div className="fixed inset-0 z-[2000] bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm animate-in fade-in">
+      <div className="relative w-full max-w-xl max-h-[90vh] overflow-y-auto bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl text-white p-6 space-y-6">
         
-        {/* Header */}
-        <div className="p-6 bg-red-600 text-white flex items-center justify-between">
+        {/* Header Modal */}
+        <div className="flex items-center justify-between border-b border-slate-800 pb-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-white/20 rounded-xl backdrop-blur-md">
+            <div className="p-2.5 bg-red-500/20 text-red-500 rounded-2xl">
               <AlertTriangle className="w-6 h-6" />
             </div>
             <div>
-              <h2 className="font-bold text-lg leading-tight">Lapor Darurat Bencana</h2>
-              <p className="text-xs text-red-100">Identitas: <span className="font-mono font-bold">{getDeviceId()}</span></p>
+              <h2 className="text-lg font-bold">Lapor Bencana Darurat</h2>
+              <p className="text-xs text-slate-400">Isi informasi bencana dengan cepat dan akurat</p>
             </div>
           </div>
-          <button onClick={() => setCreateModalOpen(false)} className="p-2 hover:bg-white/20 rounded-full transition-colors">
+          <button 
+            onClick={() => setIsFormOpen(false)}
+            className="p-2 text-slate-400 hover:text-white rounded-full hover:bg-slate-800 transition-all"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
-          
-          {/* Lokasi GPS Auto */}
-          <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
-                <MapPin className="w-4 h-4 text-red-500" />
-                {coords ? `GPS: ${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}` : 'Lokasi Presisi GPS'}
-              </div>
-              <button
-                type="button"
-                onClick={handleGetLocation}
-                disabled={isLocating}
-                className="px-3 py-1.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 font-bold text-xs rounded-xl hover:bg-red-200 transition-all flex items-center gap-1"
-              >
-                {isLocating ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Kunci GPS Saya'}
-              </button>
+        {/* Panel Indikator GPS */}
+        <div className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/50 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <MapPin className={`w-5 h-5 ${gpsStatus === 'success' ? 'text-emerald-400' : 'text-amber-400'}`} />
+            <div>
+              <p className="text-xs font-bold">
+                {gpsStatus === 'loading' && 'Mendeteksi Lokasi GPS...'}
+                {gpsStatus === 'success' && 'Lokasi GPS Berhasil Dideteksi'}
+                {gpsStatus === 'denied' && 'GPS Terkendala (Menggunakan Lokasi Default)'}
+              </p>
+              {coords && (
+                <p className="text-[10px] text-slate-400 font-mono">
+                  Lat: {coords.lat.toFixed(5)}, Lng: {coords.lng.toFixed(5)}
+                </p>
+              )}
+              {gpsErrorMsg && <p className="text-[10px] text-red-400">{gpsErrorMsg}</p>}
             </div>
           </div>
+          {gpsStatus === 'loading' ? (
+            <Loader2 className="w-4 h-4 text-slate-400 animate-spin" />
+          ) : (
+            <button
+              type="button"
+              onClick={requestLocation}
+              className="px-3 py-1.5 text-[11px] font-bold bg-slate-700 hover:bg-slate-600 rounded-xl transition-all"
+            >
+              Ulangi GPS
+            </button>
+          )}
+        </div>
 
-          {/* Judul Kejadian (Wajib) */}
+        {/* Form Input */}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          
+          {/* 🔴 JUDUL BENCANA (WAJIB) */}
           <div>
-            <label className="block text-xs font-bold uppercase text-slate-500 mb-1">
-              Judul Bencana / Kejadian <span className="text-red-500">*</span>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
+              Judul Kejadian <span className="text-red-500">* (Wajib)</span>
             </label>
             <input
               type="text"
               required
-              placeholder="Contoh: Pohon Tumbang / Banjir Semata Kaki"
+              placeholder="Contoh: Banjir Bandang Luapan Sungai Citarum"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-red-500"
+              className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-2xl text-sm focus:outline-none focus:border-red-500 transition-all placeholder:text-slate-500"
             />
           </div>
 
-          {/* Kategori */}
+          {/* 🟡 JENIS BENCANA (OPSIONAL) */}
           <div>
-            <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Kategori Kejadian</label>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+              Jenis Bencana (Opsional)
+            </label>
             <select
               value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-red-500"
+              onChange={(e) => setCategory(e.target.value as Report['category'])}
+              className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-2xl text-sm focus:outline-none focus:border-red-500 transition-all text-slate-200"
             >
-              <option value="BANJIR">🌊 Banjir / Genangan</option>
-              <option value="POHON_TUMBANG">🌳 Pohon Tumbang</option>
-              <option value="KEBAKARAN">🔥 Kebakaran</option>
+              <option value="BANJIR">🌊 Banjir</option>
               <option value="LONGSOR">⛰️ Tanah Longsor</option>
               <option value="GEMPA">🫨 Gempa Bumi</option>
-              <option value="LAINNYA">🚨 Darurat Lainnya</option>
+              <option value="KEBAKARAN">🔥 Kebakaran</option>
+              <option value="ANGIN_PUTING_BELIUNG">🌪️ Angin Puting Beliung</option>
+              <option value="TSUNAMI">🌊 Tsunami</option>
+              <option value="LAINNYA">⚠️ Bencana Lainnya</option>
             </select>
           </div>
 
-          {/* Opsional Kronologi & Korban */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {/* 🟡 KRONOLOGI / DESKRIPSI (OPSIONAL) */}
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+              Kronologi / Keterangan Tambahan (Opsional)
+            </label>
+            <textarea
+              rows={3}
+              placeholder="Ceritakan singkat kronologi kejadian, kebutuhan mendesak, atau jalur evakuasi..."
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-2xl text-sm focus:outline-none focus:border-red-500 transition-all placeholder:text-slate-500"
+            />
+          </div>
+
+          {/* 🟡 ESTIMASI KORBAN & KERUSAKAN (OPSIONAL) */}
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Estimasi Korban (Opsional)</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                Estimasi Korban (Opsional)
+              </label>
               <input
-                type="text"
-                placeholder="Misal: 2 Orang Luka"
-                value={victimCount}
-                onChange={(e) => setVictimCount(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm"
+                type="number"
+                placeholder="0 jiwa"
+                value={casualties}
+                onChange={(e) => setCasualties(e.target.value)}
+                className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-2xl text-sm focus:outline-none focus:border-red-500 transition-all placeholder:text-slate-500"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Deskripsi / Kronologi</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                Dampak Kerusakan (Opsional)
+              </label>
               <input
                 type="text"
-                placeholder="Detail situasi..."
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm"
+                placeholder="Misal: 5 Rumah Rusak Berat"
+                value={damage}
+                onChange={(e) => setDamage(e.target.value)}
+                className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-2xl text-sm focus:outline-none focus:border-red-500 transition-all placeholder:text-slate-500"
               />
             </div>
           </div>
 
-          {/* Upload Foto & Video */}
-          <div className="grid grid-cols-2 gap-3 pt-2">
-            <div>
-              <label className="flex items-center justify-center gap-2 p-3 rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 cursor-pointer hover:border-red-500 text-slate-500 text-xs font-bold">
-                <Camera className="w-4 h-4 text-red-500" />
-                Upload Foto
-                <input type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
+          {/* 🟡 UPLOAD FOTO & VIDEO (OPSIONAL) */}
+          <div className="space-y-2">
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">
+              Dokumentasi Foto / Video (Opsional)
+            </label>
+            
+            <div className="flex gap-3">
+              {/* Tombol Kamera / Foto */}
+              <label className="flex-1 flex items-center justify-center gap-2 p-3 bg-slate-800 hover:bg-slate-700 border border-dashed border-slate-600 rounded-2xl cursor-pointer transition-all text-xs font-bold text-slate-300">
+                <Camera className="w-4 h-4 text-red-400" />
+                <span>+ Foto Galeri/Kamera</span>
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  multiple 
+                  onChange={handlePhotoUpload} 
+                  className="hidden" 
+                />
+              </label>
+
+              {/* Tombol Video */}
+              <label className="flex-1 flex items-center justify-center gap-2 p-3 bg-slate-800 hover:bg-slate-700 border border-dashed border-slate-600 rounded-2xl cursor-pointer transition-all text-xs font-bold text-slate-300">
+                <Video className="w-4 h-4 text-blue-400" />
+                <span>+ Video Recording</span>
+                <input 
+                  type="file" 
+                  accept="video/*" 
+                  onChange={handleVideoUpload} 
+                  className="hidden" 
+                />
               </label>
             </div>
-            <div>
-              <label className="flex items-center justify-center gap-2 p-3 rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 cursor-pointer hover:border-red-500 text-slate-500 text-xs font-bold">
-                <Video className="w-4 h-4 text-blue-500" />
-                Upload Video
-                <input type="file" accept="video/*" onChange={handleVideoChange} className="hidden" />
-              </label>
-            </div>
+
+            {/* Progress Bar Upload */}
+            {isUploading && (
+              <div className="space-y-1">
+                <div className="flex justify-between text-[10px] text-slate-400 font-bold">
+                  <span>Mengunggah Media...</span>
+                  <span>{uploadProgress}%</span>
+                </div>
+                <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-red-500 transition-all duration-300"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Preview Foto */}
+            {photos.length > 0 && (
+              <div className="flex gap-2 overflow-x-auto py-2">
+                {photos.map((src, index) => (
+                  <div key={index} className="relative w-16 h-16 rounded-xl overflow-hidden border border-slate-700 shrink-0">
+                    <img src={src} alt="Preview" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => setPhotos(photos.filter((_, i) => i !== index))}
+                      className="absolute top-1 right-1 p-0.5 bg-red-600 rounded-full text-white"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* Media Previews */}
-          {mediaPreview && (
-            <div className="relative rounded-xl overflow-hidden max-h-40 border border-slate-300">
-              <img src={mediaPreview} alt="Preview Foto" className="w-full h-full object-cover" />
-            </div>
-          )}
-          {videoPreview && (
-            <div className="rounded-xl overflow-hidden max-h-40 border border-slate-300">
-              <video src={videoPreview} controls className="w-full h-full object-cover" />
-            </div>
-          )}
+          {/* 🟡 KONTAK PELAPOR (OPSIONAL) */}
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+              Nomor Telepon / WhatsApp (Opsional)
+            </label>
+            <input
+              type="tel"
+              placeholder="081234567890 (Untuk konfirmasi tim lapangan)"
+              value={contact}
+              onChange={(e) => setContact(e.target.value)}
+              className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-2xl text-sm focus:outline-none focus:border-red-500 transition-all placeholder:text-slate-500"
+            />
+          </div>
 
-          {/* Submit Button */}
-          <button
-            type="submit"
-            className="w-full py-4 bg-red-600 hover:bg-red-700 text-white font-extrabold rounded-2xl shadow-lg shadow-red-600/30 transition-all flex items-center justify-center gap-2 text-base mt-4"
-          >
-            KIRIM LAPORAN SEKARANG
-          </button>
+          {/* Action Buttons */}
+          <div className="flex gap-3 pt-4 border-t border-slate-800">
+            <button
+              type="button"
+              onClick={() => setIsFormOpen(false)}
+              className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 rounded-2xl font-bold text-xs text-slate-300 transition-all"
+            >
+              Batal
+            </button>
+            <button
+              type="submit"
+              className="flex-1 py-3 bg-red-600 hover:bg-red-500 rounded-2xl font-bold text-xs text-white shadow-lg shadow-red-600/30 transition-all flex items-center justify-center gap-2"
+            >
+              <Upload className="w-4 h-4" />
+              Kirim Laporan Bencana
+            </button>
+          </div>
+
         </form>
       </div>
     </div>
