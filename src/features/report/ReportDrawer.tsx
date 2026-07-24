@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
-import { useMapStore, getDeviceId, ReportStatus } from '@/store/useMapStore';
+import { useMapStore, ReportStatus } from '@/store/useMapStore';
+import { getDeviceId } from '@/utils/deviceId';
+import { ValidationMeter } from '@/components/report/ValidationMeter'; // <-- TAMBAHKAN INI
 import { 
   X, 
   MapPin, 
   ThumbsUp, 
+  ThumbsDown, // <-- TAMBAHKAN INI
   MessageSquare, 
   Clock, 
   Bot, 
@@ -12,7 +15,14 @@ import {
 } from 'lucide-react';
 
 export const ReportDrawer: React.FC = () => {
-  const { selectedReport, isDrawerOpen, setIsDrawerOpen, addComment, toggleUpvote } = useMapStore();
+  const { selectedReport, isDrawerOpen, setIsDrawerOpen, addComment, handleValidation } = useMapStore();
+  const currentDeviceId = getDeviceId();
+
+  if (!isDrawerOpen || !selectedReport) return null;
+
+  // Cek status vote dari perangkat saat ini
+  const hasVotedValid = selectedReport.votedBy?.includes(currentDeviceId);
+  const hasVotedInvalid = selectedReport.invalidatedBy?.includes(currentDeviceId);
   const [commentInput, setCommentInput] = useState('');
   const currentDeviceId = getDeviceId();
 
@@ -109,22 +119,52 @@ export const ReportDrawer: React.FC = () => {
           </div>
         </div>
 
-        {/* Validation Button */}
-        <div className="flex items-center justify-between p-4 rounded-2xl bg-red-950/20 border border-red-500/20">
-          <div className="flex items-center gap-2 text-xs">
-            <ShieldCheck className="w-5 h-5 text-red-500" />
+        {/* Validation Section (Crowd-Validation 1x Vote per Device ID) */}
+        <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+          <div className="flex items-center gap-2 text-xs mb-2">
+            <ShieldCheck className="w-5 h-5 text-indigo-400" />
             <div>
-              <p className="font-bold text-white">{selectedReport.validationsCount || 0} Warga Memvalidasi</p>
-              <p className="text-[10px] text-slate-400">Konfirmasi kebenaran informasi ini</p>
+              <p className="font-bold text-white">Verifikasi Massa (Crowd-Validation)</p>
+              <p className="text-[10px] text-slate-400">
+                ID Anda: <span className="text-slate-300 font-medium">{currentDeviceId}</span>
+              </p>
             </div>
           </div>
-          <button
-            onClick={() => toggleUpvote(selectedReport.id)}
-            className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-lg shadow-red-600/30"
-          >
-            <ThumbsUp className="w-3.5 h-3.5" />
-            Validasi
-          </button>
+
+          {/* Visualisasi Persentase Valid vs Hoaks */}
+          <ValidationMeter 
+            validVotes={selectedReport.validationsCount || 0} 
+            invalidVotes={selectedReport.invalidationsCount || 0} 
+          />
+
+          {/* Tombol Opsi Validasi */}
+          <div className="grid grid-cols-2 gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => handleValidation(selectedReport.id, 'valid')}
+              className={`py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 border ${
+                hasVotedValid 
+                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.2)]' 
+                  : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700'
+              }`}
+            >
+              <ThumbsUp className="w-4 h-4" />
+              {hasVotedValid ? '✔ Terverifikasi' : 'Informasi Valid'}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleValidation(selectedReport.id, 'invalid')}
+              className={`py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 border ${
+                hasVotedInvalid 
+                  ? 'bg-red-500/20 text-red-400 border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.2)]' 
+                  : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700'
+              }`}
+            >
+              <ThumbsDown className="w-4 h-4" />
+              {hasVotedInvalid ? '✔ Indikasi Hoaks' : 'Indikasi Hoaks'}
+            </button>
+          </div>
         </div>
 
         {/* Timeline */}

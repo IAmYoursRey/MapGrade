@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { getDeviceId } from '@/utils/deviceId';
 
 export type ReportStatus = 'UNVERIFIED' | 'NEEDS_REVIEW' | 'IN_PROGRESS' | 'RESOLVED' | 'ARCHIVED';
 export type MapLayerType = 'dark' | 'streets' | 'satellite' | 'heatmap';
@@ -20,26 +21,29 @@ export interface TimelineItem {
 }
 
 export interface Report {
-  id: string;
-  title: string;
-  category: string;
-  description: string;
-  latitude: number;
-  longitude: number;
-  status: ReportStatus;
-  createdAt: string;
-  photos?: string[];
-  videos?: string[];
-  casualties?: number;
-  damage?: string;
-  contactPhone?: string;
-  upvotes: number;
-  validationsCount: number;
-  commentsCount: number;
-  comments?: Comment[];
-  timeline?: TimelineItem[];
-  aiSummary?: string;
-}
+    id: string;
+    title: string;
+    category: string;
+    description: string;
+    latitude: number;
+    longitude: number;
+    status: ReportStatus;
+    createdAt: string;
+    photos?: string[];
+    videos?: string[];
+    casualties?: number;
+    damage?: string;
+    contactPhone?: string;
+    upvotes: number;
+    validationsCount: number;
+    invalidationsCount?: number; // <-- TAMBAHKAN INI
+    votedBy?: string[];          // <-- TAMBAHKAN INI (Array Device ID valid)
+    invalidatedBy?: string[];    // <-- TAMBAHKAN INI (Array Device ID hoaks)
+    commentsCount: number;
+    comments?: Comment[];
+    timeline?: TimelineItem[];
+    aiSummary?: string;
+  }
 
 // Device ID Permanen via localStorage
 export const getDeviceId = (): string => {
@@ -70,6 +74,7 @@ interface MapStore {
   addReport: (report: Report) => void;
   addComment: (reportId: string, text: string) => void;
   toggleUpvote: (reportId: string) => void;
+  handleValidation: (reportId: string, type: 'valid' | 'invalid') => void; // <-- TAMBAHKAN INI
 }
 
 const INITIAL_REPORTS: Report[] = [
@@ -126,7 +131,7 @@ const INITIAL_REPORTS: Report[] = [
 ];
 
 export const useMapStore = create<MapStore>((set, get) => ({
-  reports: INITIAL_REPORTS,
+reports: INITIAL_REPORTS,
   selectedReport: null,
   isFormOpen: false,
   isDrawerOpen: false,
@@ -209,4 +214,57 @@ export const useMapStore = create<MapStore>((set, get) => ({
       }),
     }));
   }
+  handleValidation: (reportId: string, type: 'valid' | 'invalid') => {
+    const deviceId = getDeviceId();
+
+    set((state) => {
+      const updatedReports = state.reports.map((r) => {
+        if (r.id === reportId) {
+          let newVotedBy = [...(r.votedBy || [])];
+          let newInvalidatedBy = [...(r.invalidatedBy || [])];
+
+          if (type === 'valid') {
+            if (newVotedBy.includes(deviceId)) {
+              // Jika sudah pernah vote valid, batalkan vote (toggle off)
+              newVotedBy = newVotedBy.filter((id) => id !== deviceId);
+            } else {
+              // Tambahkan ke daftar valid & hapus dari daftar hoaks jika ada
+              newVotedBy.push(deviceId);
+              newInvalidatedBy = newInvalidatedBy.filter((id) => id !== deviceId);
+            }
+          } else if (type === 'invalid') {
+            if (newInvalidatedBy.includes(deviceId)) {
+              // Jika sudah pernah vote hoaks, batalkan vote (toggle off)
+              newInvalidatedBy = newInvalidatedBy.filter((id) => id !== deviceId);
+            } else {
+              // Tambahkan ke daftar hoaks & hapus dari daftar valid jika ada
+              newInvalidatedBy.push(deviceId);
+              newVotedBy = newVotedBy.filter((id) => id !== deviceId);
+            }
+          }
+
+          const updatedReport: Report = {
+            ...r,
+            votedBy: newVotedBy,
+            invalidatedBy: newInvalidatedBy,
+            validationsCount: newVotedBy.length,
+            invalidationsCount: newInvalidatedBy.length,
+          };
+
+          return updatedReport;
+        }
+        return r;
+      });
+
+      const updatedSelectedReport =
+        state.selectedReport?.id === reportId
+          ? updatedReports.find((r) => r.id === reportId) || state.selectedReport
+          : state.selectedReport;
+
+      return {
+        reports: updatedReports,
+        selectedReport: updatedSelectedReport,
+      };
+    });
+  },
 }));
