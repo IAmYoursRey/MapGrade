@@ -11,10 +11,10 @@ export const MapPage: React.FC = () => {
   return (
     <div className="relative w-full h-[calc(100vh-64px)] overflow-hidden bg-slate-950">
       
-      {/* 1. Komponen Peta Utama */}
+      {/* Peta Utama */}
       <InteractiveMap />
 
-      {/* 2. Tombol Floating Action Button (Lapor Bencana) */}
+      {/* Tombol Lapor Bencana */}
       <button
         onClick={() => setIsFormOpen(true)}
         className="fixed bottom-8 right-8 z-[1500] px-6 py-4 bg-red-600 hover:bg-red-500 text-white rounded-full font-black text-sm shadow-2xl shadow-red-600/50 flex items-center gap-3 transition-all hover:scale-105 active:scale-95 border-2 border-white/20"
@@ -23,10 +23,8 @@ export const MapPage: React.FC = () => {
         <span>LAPOR BENCANA</span>
       </button>
 
-      {/* 3. Modal Form Laporan (Triggered saat setIsFormOpen(true)) */}
+      {/* Modal & Drawer */}
       <ReportFormModal />
-
-      {/* 4. Drawer Detail Laporan & Komentar (Triggered saat marker diklik) */}
       <ReportDrawer />
 
     </div>

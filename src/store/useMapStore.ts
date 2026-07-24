@@ -41,8 +41,9 @@ export interface Report {
   aiSummary?: string;
 }
 
-// Helper untuk mengambil/membuat Device ID permanen di localStorage
+// Device ID Permanen via localStorage
 export const getDeviceId = (): string => {
+  if (typeof window === 'undefined') return 'Reporter #0000';
   let deviceId = localStorage.getItem('gosiaga_device_id');
   if (!deviceId) {
     const randomNum = Math.floor(1000 + Math.random() * 9000);
@@ -60,7 +61,6 @@ interface MapStore {
   activeLayer: MapLayerType;
   activeCategory: string;
 
-  // Actions
   setSelectedReport: (report: Report | null) => void;
   setSelectedReportId: (id: string | null) => void;
   setIsFormOpen: (open: boolean) => void;
@@ -72,13 +72,12 @@ interface MapStore {
   toggleUpvote: (reportId: string) => void;
 }
 
-// Dummy Data Awal
 const INITIAL_REPORTS: Report[] = [
   {
     id: 'rep-1',
     title: 'Banjir Luapan Sungai Kalimas',
     category: 'BANJIR',
-    description: 'Ketinggian air mencapai 80cm di jalan pemukiman. Kendaraan roda dua tidak dapat melintas.',
+    description: 'Ketinggian air mencapai 80cm di pemukiman. Kendaraan roda dua tidak dapat melintas.',
     latitude: -7.2575,
     longitude: 112.7521,
     status: 'IN_PROGRESS',
@@ -90,11 +89,11 @@ const INITIAL_REPORTS: Report[] = [
     upvotes: 24,
     validationsCount: 15,
     commentsCount: 2,
-    aiSummary: '⚡ **Ringkasan AI**: Potensi luapan air memuncak hingga malam hari. Hindari lintasan Jalan Kalimas dan gunakan jalur alternatif barat.',
+    aiSummary: '⚡ **Ringkasan AI**: Luapan air berpotensi bertahan hingga malam. Hindari lintasan Jalan Kalimas.',
     timeline: [
-      { id: 't1', title: 'Laporan Dibuat', time: '10:00 WIB', status: 'UNVERIFIED', description: 'Pelapor mengirimkan laporan bencana awal.' },
-      { id: 't2', title: 'Diverifikasi Warga', time: '10:15 WIB', status: 'NEEDS_REVIEW', description: '5 Warga sekitar mengonfirmasi kebenaran foto.' },
-      { id: 't3', title: 'Tim BPBD Meluncur', time: '10:40 WIB', status: 'IN_PROGRESS', description: 'Regu penanggulangan BPBD dalam perjalanan lokasi.' },
+      { id: 't1', title: 'Laporan Dibuat', time: '10:00 WIB', status: 'UNVERIFIED', description: 'Warga mengirimkan laporan bencana.' },
+      { id: 't2', title: 'Diverifikasi Warga', time: '10:15 WIB', status: 'NEEDS_REVIEW', description: '5 Warga mengonfirmasi titik kejadian.' },
+      { id: 't3', title: 'Tim BPBD Meluncur', time: '10:40 WIB', status: 'IN_PROGRESS', description: 'Regu penanggulangan dalam perjalanan.' },
     ],
     comments: [
       { id: 'c1', authorId: 'Reporter #1092', text: 'Air mulai naik drastis sejak jam 9 pagi tadi.', createdAt: '10:10 WIB', likes: 4 },
@@ -105,23 +104,23 @@ const INITIAL_REPORTS: Report[] = [
     id: 'rep-2',
     title: 'Pohon Tumbang Menutup Jalan',
     category: 'ANGIN_PUTING_BELIUNG',
-    description: 'Pohon peneduh jalan berukuran besar tumbang menutup total akses kendaraan.',
+    description: 'Pohon peneduh besar tumbang menutup total jalan utama.',
     latitude: -7.2800,
     longitude: 112.7300,
     status: 'UNVERIFIED',
     createdAt: new Date().toISOString(),
     photos: ['https://images.unsplash.com/photo-1516426122078-c23e76319801?auto=format&fit=crop&q=80&w=800'],
     casualties: 0,
-    damage: 'Kabel listrik putus',
+    damage: 'Kabel listrik terputus',
     upvotes: 5,
     validationsCount: 3,
     commentsCount: 1,
-    aiSummary: '⚡ **Ringkasan AI**: Akses lalu lintas terputus total. Petugas Dinas Kebersihan sedang dikontak.',
+    aiSummary: '⚡ **Ringkasan AI**: Akses jalan terputus total. Gunakan rute evakuasi lingkar selatan.',
     timeline: [
-      { id: 't1', title: 'Laporan Dibuat', time: '11:20 WIB', status: 'UNVERIFIED', description: 'Laporan baru diterima dari warga.' }
+      { id: 't1', title: 'Laporan Dibuat', time: '11:20 WIB', status: 'UNVERIFIED', description: 'Laporan diterima dari warga.' }
     ],
     comments: [
-      { id: 'c1', authorId: 'Reporter #4821', text: 'Macet panjang dari arah stasiun.', createdAt: '11:25 WIB', likes: 2 }
+      { id: 'c1', authorId: 'Reporter #4821', text: 'Lalu lintas mengalami antrean panjang.', createdAt: '11:25 WIB', likes: 2 }
     ]
   }
 ];
@@ -170,7 +169,7 @@ export const useMapStore = create<MapStore>((set, get) => ({
             ...(r.timeline || []),
             {
               id: `t-${Date.now()}`,
-              title: `Komentar baru dari ${authorId}`,
+              title: `Tanggapan dari ${authorId}`,
               time: 'Baru saja',
               status: r.status,
               description: text
@@ -196,7 +195,11 @@ export const useMapStore = create<MapStore>((set, get) => ({
     set((state) => ({
       reports: state.reports.map((r) => {
         if (r.id === reportId) {
-          const updated = { ...r, upvotes: r.upvotes + 1, validationsCount: r.validationsCount + 1 };
+          const updated = { 
+            ...r, 
+            upvotes: r.upvotes + 1, 
+            validationsCount: r.validationsCount + 1 
+          };
           if (state.selectedReport?.id === reportId) {
             set({ selectedReport: updated });
           }

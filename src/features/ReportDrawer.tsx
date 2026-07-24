@@ -7,11 +7,8 @@ import {
   MessageSquare, 
   Clock, 
   Bot, 
-  User, 
   Send, 
-  ShieldCheck, 
-  PhoneCall,
-  AlertCircle
+  ShieldCheck 
 } from 'lucide-react';
 
 export const ReportDrawer: React.FC = () => {
@@ -60,10 +57,10 @@ export const ReportDrawer: React.FC = () => {
         </button>
       </div>
 
-      {/* Content Body (Scrollable) */}
+      {/* Content Body */}
       <div className="flex-1 overflow-y-auto p-5 space-y-6">
         
-        {/* Title & Info */}
+        {/* Title */}
         <div>
           <h2 className="text-xl font-extrabold text-white leading-snug">{selectedReport.title}</h2>
           <div className="flex items-center gap-2 mt-2 text-xs text-slate-400">
@@ -72,7 +69,7 @@ export const ReportDrawer: React.FC = () => {
           </div>
         </div>
 
-        {/* AI Summary Section */}
+        {/* AI Summary */}
         {selectedReport.aiSummary && (
           <div className="p-4 rounded-2xl bg-indigo-950/40 border border-indigo-500/30 space-y-2">
             <div className="flex items-center gap-2 text-indigo-400 font-bold text-xs uppercase tracking-wider">
@@ -85,7 +82,7 @@ export const ReportDrawer: React.FC = () => {
           </div>
         )}
 
-        {/* Foto & Video Gallery */}
+        {/* Dokumentasi Foto */}
         {selectedReport.photos && selectedReport.photos.length > 0 && (
           <div className="space-y-2">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Dokumentasi Lapangan</h3>
@@ -102,7 +99,7 @@ export const ReportDrawer: React.FC = () => {
           </div>
         )}
 
-        {/* Deskripsi & Ringkasan Dampak */}
+        {/* Detail Deskripsi */}
         <div className="p-4 rounded-2xl bg-slate-800/50 border border-slate-800 space-y-3">
           <p className="text-sm text-slate-300 leading-relaxed">{selectedReport.description}</p>
           <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-700/50 text-xs text-slate-400">
@@ -117,13 +114,13 @@ export const ReportDrawer: React.FC = () => {
           </div>
         </div>
 
-        {/* Tombol Validasi Warga */}
+        {/* Validasi Warga */}
         <div className="flex items-center justify-between p-4 rounded-2xl bg-red-950/20 border border-red-500/20">
           <div className="flex items-center gap-2 text-xs">
             <ShieldCheck className="w-5 h-5 text-red-500" />
             <div>
               <p className="font-bold text-white">{selectedReport.validationsCount} Warga Memvalidasi</p>
-              <p className="text-[10px] text-slate-400">Bantu konfirmasi kebenaran informasi ini</p>
+              <p className="text-[10px] text-slate-400">Konfirmasi kebenaran informasi ini</p>
             </div>
           </div>
           <button
@@ -135,7 +132,7 @@ export const ReportDrawer: React.FC = () => {
           </button>
         </div>
 
-        {/* Timeline Otomatis */}
+        {/* Timeline Penanganan */}
         <div className="space-y-3">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
             <Clock className="w-4 h-4 text-slate-400" />
@@ -155,7 +152,7 @@ export const ReportDrawer: React.FC = () => {
           </div>
         </div>
 
-        {/* Komentar Warga & Identitas Device ID */}
+        {/* Diskusi Komentar */}
         <div className="space-y-4 pt-4 border-t border-slate-800">
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
@@ -163,15 +160,14 @@ export const ReportDrawer: React.FC = () => {
               <span>Diskusi Warga ({selectedReport.comments?.length || 0})</span>
             </h3>
             <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-1 rounded-lg font-mono">
-              ID Anda: {currentDeviceId}
+              ID: {currentDeviceId}
             </span>
           </div>
 
-          {/* Form Input Komentar */}
           <form onSubmit={handleSendComment} className="flex gap-2">
             <input
               type="text"
-              placeholder={`Tulis tanggapan sebagai ${currentDeviceId}...`}
+              placeholder={`Komentar sebagai ${currentDeviceId}...`}
               value={commentInput}
               onChange={(e) => setCommentInput(e.target.value)}
               className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500 placeholder:text-slate-500"
@@ -184,7 +180,6 @@ export const ReportDrawer: React.FC = () => {
             </button>
           </form>
 
-          {/* Daftar Komentar */}
           <div className="space-y-2.5">
             {selectedReport.comments?.map((comment) => (
               <div key={comment.id} className="p-3 bg-slate-800/40 rounded-xl border border-slate-800/80 space-y-1">
