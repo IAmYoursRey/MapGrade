@@ -9,10 +9,14 @@ export const InteractiveMap: React.FC = () => {
   const leafletMap = useRef<L.Map | null>(null);
   const markersRef = useRef<{ [id: string]: L.Marker }>({});
 
-  const { reports, setSelectedReport, activeLayer, setActiveLayer } = useMapStore();
+  const store = useMapStore();
+  const reports = store.reports || [];
+  const activeLayer = store.activeLayer || 'dark';
+  const { setSelectedReport, setActiveLayer, setIsDrawerOpen } = store;
+
   const [showLayerSelector, setShowLayerSelector] = useState(false);
 
-  // Map Tile Providers (dengan penanganan huruf besar & kecil + fallback)
+  // Map Tile Providers
   const tileUrls: Record<string, { url: string; attr: string }> = {
     dark: {
       url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
@@ -53,7 +57,7 @@ export const InteractiveMap: React.FC = () => {
       case 'NEEDS_REVIEW': return '#f59e0b'; // 🟠 Kuning (Perlu Review)
       case 'IN_PROGRESS': return '#3b82f6'; // 🔵 Biru (Ditangani BPBD)
       case 'RESOLVED': return '#10b981'; // 🟢 Hijau (Selesai)
-      default: return '#6b7280'; // ⚫ Hitam (Arsip)
+      default: return '#6b7280'; // ⚫ Hitam/Abu (Arsip)
     }
   };
 
@@ -62,7 +66,7 @@ export const InteractiveMap: React.FC = () => {
     if (!mapRef.current || leafletMap.current) return;
 
     leafletMap.current = L.map(mapRef.current, {
-      center: [-7.2575, 112.7521], // Surabaya Default
+      center: [-7.2575, 112.7521], // Default Surabaya
       zoom: 12,
       zoomControl: false
     });
@@ -77,7 +81,7 @@ export const InteractiveMap: React.FC = () => {
     };
   }, []);
 
-  // Update Tile Layer
+  // Update Tile Layer saat activeLayer Berubah
   useEffect(() => {
     if (!leafletMap.current) return;
     leafletMap.current.eachLayer((layer) => {
@@ -90,11 +94,11 @@ export const InteractiveMap: React.FC = () => {
     }).addTo(leafletMap.current);
   }, [activeLayer]);
 
-  // Render Markers dynamically
+  // Render Marker secara Dinamis
   useEffect(() => {
     if (!leafletMap.current) return;
 
-    // Clear old markers
+    // Bersihkan marker lama
     Object.values(markersRef.current).forEach((m) => m.remove());
     markersRef.current = {};
 
@@ -126,13 +130,14 @@ export const InteractiveMap: React.FC = () => {
       const marker = L.marker([report.latitude, report.longitude], { icon: customIcon })
         .addTo(leafletMap.current!)
         .on('click', () => {
-          setSelectedReport(report);
+          if (setSelectedReport) setSelectedReport(report);
+          if (setIsDrawerOpen) setIsDrawerOpen(true);
           leafletMap.current?.flyTo([report.latitude, report.longitude], 15, { duration: 1 });
         });
 
       markersRef.current[report.id] = marker;
     });
-  }, [reports]);
+  }, [reports, setSelectedReport, setIsDrawerOpen]);
 
   return (
     <div className="relative w-full h-full">
@@ -148,7 +153,7 @@ export const InteractiveMap: React.FC = () => {
           Layer Peta
         </button>
 
-        {/* Modal Layer Options */}
+        {/* Modal Pilihan Layer */}
         {showLayerSelector && (
           <div className="absolute right-0 mt-3 w-56 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 p-4 space-y-2 animate-in fade-in slide-in-from-top-2">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-700">
@@ -166,7 +171,7 @@ export const InteractiveMap: React.FC = () => {
               <button
                 key={layer.id}
                 onClick={() => {
-                  setActiveLayer(layer.id as MapLayerType);
+                  if (setActiveLayer) setActiveLayer(layer.id as MapLayerType);
                   setShowLayerSelector(false);
                 }}
                 className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold transition-all ${

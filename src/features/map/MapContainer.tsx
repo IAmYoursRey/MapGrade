@@ -1,8 +1,9 @@
 import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { useMapStore } from '@/store/useMapStore';
+import { useMapStore, ReportStatus } from '@/store/useMapStore';
 
+// Pilihan Tile Peta dengan fallback lengkap (Aman dari 'undefined')
 const MAP_LAYERS: Record<string, string> = {
   dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
   DARK: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
@@ -12,6 +13,17 @@ const MAP_LAYERS: Record<string, string> = {
   satellite: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
   SATELLITE: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
   heatmap: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+};
+
+// Fungsi Warna Marker Berdasarkan Status
+const getStatusColor = (status?: ReportStatus | string) => {
+  switch (status) {
+    case 'UNVERIFIED': return '#ef4444'; // 🔴 Merah (Baru / Belum Verifikasi)
+    case 'NEEDS_REVIEW': return '#f59e0b'; // 🟠 Kuning (Perlu Review)
+    case 'IN_PROGRESS': return '#3b82f6'; // 🔵 Biru (Sedang Ditangani BPBD)
+    case 'RESOLVED': return '#10b981'; // 🟢 Hijau (Selesai)
+    default: return '#6b7280'; // ⚫ Abu-abu (Arsip / Lainnya)
+  }
 };
 
 export const MapContainer: React.FC = () => {
@@ -24,20 +36,23 @@ export const MapContainer: React.FC = () => {
   const reports = store.reports || [];
   const activeCategory = store.activeCategory || store.filterCategory || 'ALL';
   const activeLayer = store.activeLayer || 'dark';
-  const setSelectedReportId = store.setSelectedReportId || store.setSelectedReport || (() => {});
 
-  // 1. Inisialisasi Peta
+  // Extract fungsi store dengan aman
+  const setSelectedReport = store.setSelectedReport || store.setSelectedReportId || (() => {});
+  const setIsDrawerOpen = store.setIsDrawerOpen || (() => {});
+
+  // 1. Inisialisasi Peta Leaflet
   useEffect(() => {
     if (!mapRef.current || leafletMap.current) return;
 
-    // Titik tengah default (Indonesia)
+    // Default lokasi: Indonesia Center
     leafletMap.current = L.map(mapRef.current, {
       center: [-0.7893, 113.9213], 
       zoom: 5,
       zoomControl: false,
     });
 
-    // Tambahkan kontrol zoom ke posisi kanan atas
+    // Kontrol Zoom di Posisi Kanan Atas
     L.control.zoom({ position: 'topright' }).addTo(leafletMap.current);
 
     markersLayer.current = L.layerGroup().addTo(leafletMap.current);
@@ -48,7 +63,7 @@ export const MapContainer: React.FC = () => {
     };
   }, []);
 
-  // 2. Sinkronisasi Base Layer Peta (Safe Fallback)
+  // 2. Update Layer Peta saat `activeLayer` Berubah
   useEffect(() => {
     if (!leafletMap.current) return;
 
@@ -64,7 +79,7 @@ export const MapContainer: React.FC = () => {
     }).addTo(leafletMap.current);
   }, [activeLayer]);
 
-  // 3. Render Titik Merah Dinamis (Glowing Markers)
+  // 3. Render Marker Dinamis dengan Event Klik Lengkap
   useEffect(() => {
     if (!leafletMap.current || !markersLayer.current) return;
     
@@ -75,28 +90,51 @@ export const MapContainer: React.FC = () => {
       : reports.filter(r => r.category === activeCategory);
 
     filteredReports.forEach((report) => {
-      const glowingIcon = L.divIcon({
-        className: 'bg-transparent',
-        html: `<div class="w-4 h-4 bg-red-500 rounded-full marker-glowing-red border-2 border-white"></div>`,
-        iconSize: [16, 16],
-        iconAnchor: [8, 8],
+      const color = getStatusColor(report.status);
+
+      // Icon Kustom dengan Efek Glowing Sesuai Status
+      const customIcon = L.divIcon({
+        className: 'custom-map-marker',
+        html: `
+          <div style="
+            width: 22px; 
+            height: 22px; 
+            background-color: ${color}; 
+            border: 2px solid white; 
+            border-radius: 50%; 
+            box-shadow: 0 0 12px ${color}; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            cursor: pointer;
+          ">
+            <div style="width: 6px; height: 6px; background: white; border-radius: 50%;"></div>
+          </div>
+        `,
+        iconSize: [22, 22],
+        iconAnchor: [11, 11],
       });
 
-      const marker = L.marker([report.latitude, report.longitude], { icon: glowingIcon });
+      const marker = L.marker([report.latitude, report.longitude], { icon: customIcon });
 
+      // EVENT KLIK MARKER: Pindah Peta + Pilih Laporan + Buka Drawer
       marker.on('click', () => {
-        if (typeof setSelectedReportId === 'function') {
-          setSelectedReportId(report.id);
+        if (typeof setSelectedReport === 'function') {
+          setSelectedReport(report);
         }
-        leafletMap.current?.flyTo([report.latitude, report.longitude], 14, {
-          duration: 1.5,
+        if (typeof setIsDrawerOpen === 'function') {
+          setIsDrawerOpen(true);
+        }
+
+        leafletMap.current?.flyTo([report.latitude, report.longitude], 15, {
+          duration: 1.2,
           easeLinearity: 0.25,
         });
       });
 
       markersLayer.current?.addLayer(marker);
     });
-  }, [reports, activeCategory, setSelectedReportId]);
+  }, [reports, activeCategory, setSelectedReport, setIsDrawerOpen]);
 
   return <div ref={mapRef} className="w-full h-full bg-slate-900 z-0" />;
 };
