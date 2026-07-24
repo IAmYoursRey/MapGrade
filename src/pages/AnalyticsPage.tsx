@@ -22,19 +22,21 @@ export const AnalyticsPage: React.FC = () => {
       attribution: '&copy; OpenStreetMap & GoSiaga',
     }).addTo(leafletMap.current);
 
-    // Render "Mock" Heatmap menggunakan Lingkaran bergradasi (CircleMarkers)
-    // Di produksi nyata, akan menggunakan leaflet.heat plugin
     reports.forEach((report) => {
-      // Radius disimulasikan dari besarnya dukungan/validasi (contoh logika)
-      const radius = 20000 + (report.validVotes * 1000); 
-      
-      L.circle([report.latitude, report.longitude], {
-        color: 'transparent',
-        fillColor: report.status === 'NEEDS_REVIEW' ? '#f59e0b' : '#e53935', // Kuning (Hoaks) atau Merah (Valid)
-        fillOpacity: 0.4,
-        radius: radius,
-      }).addTo(leafletMap.current!);
-    });
+        // PASTIKAN MENGGUNAKAN validationsCount dan berikan nilai fallback (|| 0)
+        const safeValidations = report.validationsCount || 0;
+        const radius = 20000 + (safeValidations * 1000); 
+        
+        // Pastikan titik koordinat juga bukan angka kosong (opsional tapi aman)
+        if (typeof report.latitude === 'number' && typeof report.longitude === 'number') {
+          L.circle([report.latitude, report.longitude], { 
+            color: 'transparent',
+            fillColor: report.status === 'NEEDS_REVIEW' ? '#f59e0b' : '#e53935', 
+            fillOpacity: 0.4,
+            radius: radius, // <-- Sekarang radius ini dipastikan angka bulat!
+          }).addTo(leafletMap.current!);
+        }
+      });
 
     return () => {
       leafletMap.current?.remove();
