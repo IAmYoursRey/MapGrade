@@ -213,7 +213,7 @@ reports: INITIAL_REPORTS,
         return r;
       }),
     }));
-  }
+  },
   handleValidation: (reportId: string, type: 'valid' | 'invalid') => {
     const deviceId = getDeviceId();
 
