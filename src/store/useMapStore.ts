@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { EmergencyReport, ReportStatus } from '@/types';
+import { EmergencyReport } from '@/types';
 
 type MapLayerType = 'STREET' | 'DARK' | 'SATELLITE';
 

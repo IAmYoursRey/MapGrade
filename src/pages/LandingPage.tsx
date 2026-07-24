@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { MapPin, ShieldAlert, Users, BrainCircuit, Globe2, ArrowRight } from 'lucide-react';
+import { MapPin, ShieldAlert, Users, BrainCircuit, Globe2 } from 'lucide-react';
 import { AnimatedCounter } from '@/components/common/AnimatedCounter';
 
 export const LandingPage: React.FC = () => {

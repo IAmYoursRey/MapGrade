@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Clock, BrainCircuit, ShieldAlert, Share2 } from 'lucide-react';
+import { X, Clock, BrainCircuit, ShieldAlert } from 'lucide-react';
 import { useMapStore } from '@/store/useMapStore';
 import { ValidationMeter } from '@/components/report/ValidationMeter';
 
