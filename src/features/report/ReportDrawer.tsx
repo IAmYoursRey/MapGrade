@@ -24,7 +24,6 @@ export const ReportDrawer: React.FC = () => {
   const hasVotedValid = selectedReport.votedBy?.includes(currentDeviceId);
   const hasVotedInvalid = selectedReport.invalidatedBy?.includes(currentDeviceId);
   const [commentInput, setCommentInput] = useState('');
-  const currentDeviceId = getDeviceId();
 
   if (!isDrawerOpen || !selectedReport) return null;
 
