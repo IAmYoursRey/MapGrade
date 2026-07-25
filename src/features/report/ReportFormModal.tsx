@@ -7,12 +7,12 @@ import {
   Video, 
   AlertTriangle, 
   Loader2, 
-  CheckCircle2, 
   Upload, 
   Trash2 
 } from 'lucide-react';
 
 export const ReportFormModal: React.FC = () => {
+  // ... sisa isi kode tetap sama
   const { isFormOpen, setIsFormOpen, addReport } = useMapStore();
 
   // State Form (Hanya title yang wajib)

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
+// @ts-ignore
 import 'leaflet/dist/leaflet.css';
 import { useMapStore, ReportStatus, MapLayerType } from '@/store/useMapStore';
 import { Layers, X } from 'lucide-react';
@@ -8,6 +9,7 @@ export const InteractiveMap: React.FC = () => {
   const mapRef = useRef<HTMLDivElement>(null);
   const leafletMap = useRef<L.Map | null>(null);
   const markersRef = useRef<{ [id: string]: L.Marker }>({});
+  const circlesRef = useRef<{ [id: string]: L.Circle }>({});
 
   const store = useMapStore();
   const reports = store.reports || [];
@@ -34,7 +36,7 @@ export const InteractiveMap: React.FC = () => {
     },
     heatmap: {
       url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-      attr: '&copy; CartoDB Heatmap'
+      attr: '&copy; CartoDB'
     }
   };
 
@@ -42,11 +44,11 @@ export const InteractiveMap: React.FC = () => {
 
   const getMarkerColor = (status: ReportStatus) => {
     switch (status) {
-      case 'UNVERIFIED': return '#ef4444'; // 🔴 Merah
-      case 'NEEDS_REVIEW': return '#f59e0b'; // 🟠 Kuning
-      case 'IN_PROGRESS': return '#3b82f6'; // 🔵 Biru
-      case 'RESOLVED': return '#10b981'; // 🟢 Hijau
-      default: return '#6b7280'; // ⚫ Hitam
+      case 'UNVERIFIED': return '#ef4444';
+      case 'NEEDS_REVIEW': return '#f59e0b';
+      case 'IN_PROGRESS': return '#3b82f6';
+      case 'RESOLVED': return '#10b981';
+      default: return '#6b7280';
     }
   };
 
@@ -55,7 +57,7 @@ export const InteractiveMap: React.FC = () => {
 
     leafletMap.current = L.map(mapRef.current, {
       center: [-7.2575, 112.7521],
-      zoom: 12,
+      zoom: 13,
       zoomControl: false
     });
 
@@ -85,31 +87,45 @@ export const InteractiveMap: React.FC = () => {
     if (!leafletMap.current) return;
 
     Object.values(markersRef.current).forEach((m) => m.remove());
+    Object.values(circlesRef.current).forEach((c) => c.remove());
     markersRef.current = {};
+    circlesRef.current = {};
 
     reports.forEach((report) => {
       const color = getMarkerColor(report.status);
-      
+
+      if (activeLayer === 'heatmap') {
+        const circle = L.circle([report.latitude, report.longitude], {
+          color: color,
+          fillColor: color,
+          fillOpacity: 0.25,
+          radius: 50,
+          weight: 1.5
+        }).addTo(leafletMap.current!);
+
+        circlesRef.current[report.id] = circle;
+      }
+
       const customIcon = L.divIcon({
         className: 'custom-marker-pin',
         html: `
           <div style="
-            width: 26px; 
-            height: 26px; 
+            width: 22px; 
+            height: 22px; 
             background-color: ${color}; 
-            border: 3px solid white; 
+            border: 2px solid white; 
             border-radius: 50%; 
-            box-shadow: 0 0 14px ${color}; 
+            box-shadow: 0 0 10px ${color}; 
             display: flex; 
             align-items: center; 
             justify-content: center;
             cursor: pointer;
           ">
-            <div style="width: 6px; height: 6px; background: white; border-radius: 50%;"></div>
+            <div style="width: 5px; height: 5px; background: white; border-radius: 50%;"></div>
           </div>
         `,
-        iconSize: [26, 26],
-        iconAnchor: [13, 13]
+        iconSize: [22, 22],
+        iconAnchor: [11, 11]
       });
 
       const marker = L.marker([report.latitude, report.longitude], { icon: customIcon })
@@ -117,18 +133,17 @@ export const InteractiveMap: React.FC = () => {
         .on('click', () => {
           if (typeof setSelectedReport === 'function') setSelectedReport(report);
           if (typeof setIsDrawerOpen === 'function') setIsDrawerOpen(true);
-          leafletMap.current?.flyTo([report.latitude, report.longitude], 15, { duration: 1.2 });
+          leafletMap.current?.flyTo([report.latitude, report.longitude], 17, { duration: 1.2 });
         });
 
       markersRef.current[report.id] = marker;
     });
-  }, [reports, setSelectedReport, setIsDrawerOpen]);
+  }, [reports, activeLayer, setSelectedReport, setIsDrawerOpen]);
 
   return (
     <div className="relative w-full h-full">
       <div ref={mapRef} className="w-full h-full z-0 bg-slate-900" />
 
-      {/* Layer Selector Widget */}
       <div className="absolute top-6 right-6 z-[1000]">
         <button
           onClick={() => setShowLayerSelector(!showLayerSelector)}
@@ -150,7 +165,7 @@ export const InteractiveMap: React.FC = () => {
               { id: 'dark', label: '🌙 Mode Gelap' },
               { id: 'streets', label: '🗺️ Mode Jalan' },
               { id: 'satellite', label: '🛰️ Satelit' },
-              { id: 'heatmap', label: '🔥 Heatmap Bencana' },
+              { id: 'heatmap', label: '🔥 Zonasi Bencana' },
             ].map((layer) => (
               <button
                 key={layer.id}

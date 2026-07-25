@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { useMapStore, ReportStatus } from '@/store/useMapStore';
+import { useMapStore } from '@/store/useMapStore';
 import { getDeviceId } from '@/utils/deviceId';
 import { ValidationMeter } from '@/components/report/ValidationMeter';
 import { X, MapPin, ThumbsUp, ThumbsDown, MessageSquare, Bot, Send, ShieldCheck } from 'lucide-react';
 
 export const ReportDrawer: React.FC = () => {
-  // 1. Ambil data dari store secara aman (Defensive Destructuring)
+  // ... sisa isi kode tetap sama
   const store = useMapStore();
   const selectedReport = store.selectedReport;
   const isDrawerOpen = store.isDrawerOpen;

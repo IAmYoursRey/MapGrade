@@ -1,9 +1,9 @@
 import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
+// @ts-ignore
 import 'leaflet/dist/leaflet.css';
 import { useMapStore, ReportStatus } from '@/store/useMapStore';
 
-// Pilihan Tile Peta dengan fallback lengkap (Aman dari 'undefined')
 const MAP_LAYERS: Record<string, string> = {
   dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
   DARK: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
@@ -15,14 +15,13 @@ const MAP_LAYERS: Record<string, string> = {
   heatmap: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
 };
 
-// Fungsi Warna Marker Berdasarkan Status
 const getStatusColor = (status?: ReportStatus | string) => {
   switch (status) {
-    case 'UNVERIFIED': return '#ef4444'; // 🔴 Merah (Baru / Belum Verifikasi)
-    case 'NEEDS_REVIEW': return '#f59e0b'; // 🟠 Kuning (Perlu Review)
-    case 'IN_PROGRESS': return '#3b82f6'; // 🔵 Biru (Sedang Ditangani BPBD)
-    case 'RESOLVED': return '#10b981'; // 🟢 Hijau (Selesai)
-    default: return '#6b7280'; // ⚫ Abu-abu (Arsip / Lainnya)
+    case 'UNVERIFIED': return '#ef4444';
+    case 'NEEDS_REVIEW': return '#f59e0b';
+    case 'IN_PROGRESS': return '#3b82f6';
+    case 'RESOLVED': return '#10b981';
+    default: return '#6b7280';
   }
 };
 
@@ -37,24 +36,19 @@ export const MapContainer: React.FC = () => {
   const activeCategory = store.activeCategory || store.filterCategory || 'ALL';
   const activeLayer = store.activeLayer || 'dark';
 
-  // Extract fungsi store dengan aman
   const setSelectedReport = store.setSelectedReport || store.setSelectedReportId || (() => {});
   const setIsDrawerOpen = store.setIsDrawerOpen || (() => {});
 
-  // 1. Inisialisasi Peta Leaflet
   useEffect(() => {
     if (!mapRef.current || leafletMap.current) return;
 
-    // Default lokasi: Indonesia Center
     leafletMap.current = L.map(mapRef.current, {
       center: [-0.7893, 113.9213], 
       zoom: 5,
       zoomControl: false,
     });
 
-    // Kontrol Zoom di Posisi Kanan Atas
     L.control.zoom({ position: 'topright' }).addTo(leafletMap.current);
-
     markersLayer.current = L.layerGroup().addTo(leafletMap.current);
 
     return () => {
@@ -63,7 +57,6 @@ export const MapContainer: React.FC = () => {
     };
   }, []);
 
-  // 2. Update Layer Peta saat `activeLayer` Berubah
   useEffect(() => {
     if (!leafletMap.current) return;
 
@@ -79,7 +72,6 @@ export const MapContainer: React.FC = () => {
     }).addTo(leafletMap.current);
   }, [activeLayer]);
 
-  // 3. Render Marker Dinamis dengan Event Klik Lengkap
   useEffect(() => {
     if (!leafletMap.current || !markersLayer.current) return;
     
@@ -92,7 +84,6 @@ export const MapContainer: React.FC = () => {
     filteredReports.forEach((report) => {
       const color = getStatusColor(report.status);
 
-      // Icon Kustom dengan Efek Glowing Sesuai Status
       const customIcon = L.divIcon({
         className: 'custom-map-marker',
         html: `
@@ -117,7 +108,6 @@ export const MapContainer: React.FC = () => {
 
       const marker = L.marker([report.latitude, report.longitude], { icon: customIcon });
 
-      // EVENT KLIK MARKER: Pindah Peta + Pilih Laporan + Buka Drawer
       marker.on('click', () => {
         if (typeof setSelectedReport === 'function') {
           setSelectedReport(report);

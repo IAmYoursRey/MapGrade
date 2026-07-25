@@ -1,15 +1,24 @@
 import { create } from 'zustand';
-import { getDeviceId } from '@/utils/deviceId';
 
 export type ReportStatus = 'UNVERIFIED' | 'NEEDS_REVIEW' | 'IN_PROGRESS' | 'RESOLVED' | 'ARCHIVED';
 export type MapLayerType = 'dark' | 'streets' | 'satellite' | 'heatmap';
 
 export interface Comment {
   id: string;
-  authorId: string; // Contoh: "Reporter #4821"
+  authorId: string;
   text: string;
   createdAt: string;
   likes: number;
+}
+
+export interface AppNotification {
+  id: string;
+  title: string;
+  message: string;
+  type: 'CRITICAL' | 'INFO' | 'SUCCESS' | 'WARNING';
+  timestamp: string;
+  read: boolean;
+  reportId?: string;
 }
 
 export interface TimelineItem {
@@ -21,29 +30,29 @@ export interface TimelineItem {
 }
 
 export interface Report {
-    id: string;
-    title: string;
-    category: string;
-    description: string;
-    latitude: number;
-    longitude: number;
-    status: ReportStatus;
-    createdAt: string;
-    photos?: string[];
-    videos?: string[];
-    casualties?: number;
-    damage?: string;
-    contactPhone?: string;
-    upvotes: number;
-    validationsCount: number;
-    invalidationsCount?: number; // <-- TAMBAHKAN INI
-    votedBy?: string[];          // <-- TAMBAHKAN INI (Array Device ID valid)
-    invalidatedBy?: string[];    // <-- TAMBAHKAN INI (Array Device ID hoaks)
-    commentsCount: number;
-    comments?: Comment[];
-    timeline?: TimelineItem[];
-    aiSummary?: string;
-  }
+  id: string;
+  title: string;
+  category: string;
+  description: string;
+  latitude: number;
+  longitude: number;
+  status: ReportStatus;
+  createdAt: string;
+  photos?: string[];
+  videos?: string[];
+  casualties?: number;
+  damage?: string;
+  contactPhone?: string;
+  upvotes: number;
+  validationsCount: number;
+  invalidationsCount?: number;
+  votedBy?: string[];
+  invalidatedBy?: string[];
+  commentsCount: number;
+  comments?: Comment[];
+  timeline?: TimelineItem[];
+  aiSummary?: string;
+}
 
 // Device ID Permanen via localStorage
 export const getDeviceId = (): string => {
@@ -57,13 +66,18 @@ export const getDeviceId = (): string => {
   return deviceId;
 };
 
-interface MapStore {
+export interface MapStore {
   reports: Report[];
   selectedReport: Report | null;
   isFormOpen: boolean;
   isDrawerOpen: boolean;
   activeLayer: MapLayerType;
   activeCategory: string;
+  filterCategory?: string; // 👈 Menambahkan optional property agar MapContainer tidak error
+
+  // --- STATE NOTIFIKASI BARU ---
+  notifications: AppNotification[];
+  unreadCount: number;
 
   setSelectedReport: (report: Report | null) => void;
   setSelectedReportId: (id: string | null) => void;
@@ -74,7 +88,13 @@ interface MapStore {
   addReport: (report: Report) => void;
   addComment: (reportId: string, text: string) => void;
   toggleUpvote: (reportId: string) => void;
-  handleValidation: (reportId: string, type: 'valid' | 'invalid') => void; // <-- TAMBAHKAN INI
+  handleValidation: (reportId: string, type: 'valid' | 'invalid') => void;
+  updateReportStatus: (reportId: string, status: ReportStatus) => void;
+  
+  // --- FUNGSI NOTIFIKASI BARU ---
+  markNotificationAsRead: (id: string) => void;
+  markAllNotificationsAsRead: () => void;
+  addNotification: (notif: Omit<AppNotification, 'id' | 'timestamp' | 'read'>) => void;
 }
 
 const INITIAL_REPORTS: Report[] = [
@@ -93,6 +113,9 @@ const INITIAL_REPORTS: Report[] = [
     contactPhone: '081234567890',
     upvotes: 24,
     validationsCount: 15,
+    invalidationsCount: 0,
+    votedBy: [],
+    invalidatedBy: [],
     commentsCount: 2,
     aiSummary: '⚡ **Ringkasan AI**: Luapan air berpotensi bertahan hingga malam. Hindari lintasan Jalan Kalimas.',
     timeline: [
@@ -119,6 +142,9 @@ const INITIAL_REPORTS: Report[] = [
     damage: 'Kabel listrik terputus',
     upvotes: 5,
     validationsCount: 3,
+    invalidationsCount: 0,
+    votedBy: [],
+    invalidatedBy: [],
     commentsCount: 1,
     aiSummary: '⚡ **Ringkasan AI**: Akses jalan terputus total. Gunakan rute evakuasi lingkar selatan.',
     timeline: [
@@ -127,16 +153,114 @@ const INITIAL_REPORTS: Report[] = [
     comments: [
       { id: 'c1', authorId: 'Reporter #4821', text: 'Lalu lintas mengalami antrean panjang.', createdAt: '11:25 WIB', likes: 2 }
     ]
+  },
+  {
+    id: 'rep-3',
+    title: 'Kebakaran Hutan Lahan Gambut',
+    category: 'KEBAKARAN',
+    description: 'Titik api terdeteksi meluas di area lahan gambut. Jarak pandang mulai terbatas.',
+    latitude: -1.2379, 
+    longitude: 114.8080,
+    status: 'NEEDS_REVIEW',
+    createdAt: new Date().toISOString(),
+    casualties: 0,
+    damage: '50 Hektar Hutan Gambut',
+    upvotes: 42,
+    validationsCount: 28,
+    invalidationsCount: 2,
+    votedBy: [],
+    invalidatedBy: [],
+    commentsCount: 0,
+    aiSummary: '⚡ **Ringkasan AI**: Arah angin membawa asap ke pemukiman warga. Butuh pemantauan udara segera.'
+  },
+  {
+    id: 'rep-4',
+    title: 'Gempa Bumi Dangkal',
+    category: 'GEMPA',
+    description: 'Gempa magnitudo 5.2 terasa kuat, beberapa bangunan retak.',
+    latitude: -0.8917,
+    longitude: 119.8707,
+    status: 'IN_PROGRESS', 
+    createdAt: new Date().toISOString(),
+    casualties: 3,
+    damage: 'Infrastruktur jalan & 5 ruko rusak',
+    upvotes: 89,
+    validationsCount: 65,
+    invalidationsCount: 0,
+    votedBy: [],
+    invalidatedBy: [],
+    commentsCount: 4,
+    aiSummary: '⚡ **Ringkasan AI**: Tim evakuasi sedang mendata kerusakan bangunan di pusat kota Palu.'
+  },
+  {
+    id: 'rep-5',
+    title: 'Longsor Jalur Lintas Provinsi',
+    category: 'LONGSOR',
+    description: 'Material longsor menutup separuh badan jalan setelah hujan deras semalaman.',
+    latitude: -0.9471,
+    longitude: 100.4172,
+    status: 'UNVERIFIED',
+    createdAt: new Date().toISOString(),
+    casualties: 0,
+    damage: 'Jalan tertutup sebagian',
+    upvotes: 12,
+    validationsCount: 5,
+    invalidationsCount: 0,
+    votedBy: [],
+    invalidatedBy: [],
+    commentsCount: 0,
+    aiSummary: '⚡ **Ringkasan AI**: Arus lalu lintas tersendat, alat berat sedang diusahakan menuju lokasi.'
+  },
+  {
+    id: 'rep-6',
+    title: 'Banjir Bandang Pegunungan',
+    category: 'BANJIR',
+    description: 'Debit air sungai naik drastis membawa material lumpur dan kayu.',
+    latitude: -2.5337,
+    longitude: 140.7181,
+    status: 'RESOLVED',
+    createdAt: new Date().toISOString(),
+    casualties: 0,
+    damage: 'Jembatan desa putus',
+    upvotes: 34,
+    validationsCount: 20,
+    invalidationsCount: 0,
+    votedBy: [],
+    invalidatedBy: [],
+    commentsCount: 0,
+    aiSummary: '⚡ **Ringkasan AI**: Air mulai surut. Warga bergotong-royong membersihkan sisa lumpur.'
   }
 ];
 
 export const useMapStore = create<MapStore>((set, get) => ({
-reports: INITIAL_REPORTS,
+  reports: INITIAL_REPORTS,
   selectedReport: null,
   isFormOpen: false,
   isDrawerOpen: false,
   activeLayer: 'dark',
   activeCategory: 'ALL',
+
+  notifications: [
+    {
+      id: 'notif-1',
+      title: '🚨 Laporan Krisis Baru',
+      message: 'Banjir Luapan Sungai Kalimas membutuhkan penanganan segera.',
+      type: 'CRITICAL',
+      timestamp: '5 menit lalu',
+      read: false,
+      reportId: 'rep-1'
+    },
+    {
+      id: 'notif-2',
+      title: '✅ Status Diperbarui',
+      message: 'Tim BPBD telah meluncur ke lokasi Pohon Tumbang.',
+      type: 'SUCCESS',
+      timestamp: '20 menit lalu',
+      read: false,
+      reportId: 'rep-2'
+    }
+  ],
+  unreadCount: 2,
 
   setSelectedReport: (report) => set({ selectedReport: report }),
   setSelectedReportId: (id) => {
@@ -214,6 +338,7 @@ reports: INITIAL_REPORTS,
       }),
     }));
   },
+
   handleValidation: (reportId: string, type: 'valid' | 'invalid') => {
     const deviceId = getDeviceId();
 
@@ -223,35 +348,42 @@ reports: INITIAL_REPORTS,
           let newVotedBy = [...(r.votedBy || [])];
           let newInvalidatedBy = [...(r.invalidatedBy || [])];
 
+          let newValidCount = r.validationsCount || 0;
+          let newInvalidCount = r.invalidationsCount || 0;
+
           if (type === 'valid') {
             if (newVotedBy.includes(deviceId)) {
-              // Jika sudah pernah vote valid, batalkan vote (toggle off)
               newVotedBy = newVotedBy.filter((id) => id !== deviceId);
+              newValidCount -= 1;
             } else {
-              // Tambahkan ke daftar valid & hapus dari daftar hoaks jika ada
               newVotedBy.push(deviceId);
-              newInvalidatedBy = newInvalidatedBy.filter((id) => id !== deviceId);
+              newValidCount += 1;
+              if (newInvalidatedBy.includes(deviceId)) {
+                newInvalidatedBy = newInvalidatedBy.filter((id) => id !== deviceId);
+                newInvalidCount -= 1;
+              }
             }
           } else if (type === 'invalid') {
             if (newInvalidatedBy.includes(deviceId)) {
-              // Jika sudah pernah vote hoaks, batalkan vote (toggle off)
               newInvalidatedBy = newInvalidatedBy.filter((id) => id !== deviceId);
+              newInvalidCount -= 1;
             } else {
-              // Tambahkan ke daftar hoaks & hapus dari daftar valid jika ada
               newInvalidatedBy.push(deviceId);
-              newVotedBy = newVotedBy.filter((id) => id !== deviceId);
+              newInvalidCount += 1;
+              if (newVotedBy.includes(deviceId)) {
+                newVotedBy = newVotedBy.filter((id) => id !== deviceId);
+                newValidCount -= 1;
+              }
             }
           }
 
-          const updatedReport: Report = {
+          return {
             ...r,
             votedBy: newVotedBy,
             invalidatedBy: newInvalidatedBy,
-            validationsCount: newVotedBy.length,
-            invalidationsCount: newInvalidatedBy.length,
+            validationsCount: Math.max(0, newValidCount),
+            invalidationsCount: Math.max(0, newInvalidCount),
           };
-
-          return updatedReport;
         }
         return r;
       });
@@ -266,5 +398,73 @@ reports: INITIAL_REPORTS,
         selectedReport: updatedSelectedReport,
       };
     });
+  },
+
+  updateReportStatus: (reportId: string, status: ReportStatus) => {
+    set((state) => {
+      const updatedReports = state.reports.map((r) => {
+        if (r.id === reportId) {
+          const updatedTimeline = [
+            ...(r.timeline || []),
+            {
+              id: `t-${Date.now()}`,
+              title: `Status Diperbarui: ${status}`,
+              time: 'Baru saja',
+              status: status,
+              description: 'Status laporan telah diperbarui oleh Tim BPBD.'
+            }
+          ];
+
+          return {
+            ...r,
+            status,
+            timeline: updatedTimeline
+          };
+        }
+        return r;
+      });
+
+      const updatedSelectedReport =
+        state.selectedReport?.id === reportId
+          ? updatedReports.find((r) => r.id === reportId) || state.selectedReport
+          : state.selectedReport;
+
+      return {
+        reports: updatedReports,
+        selectedReport: updatedSelectedReport
+      };
+    });
+  },
+
+  markNotificationAsRead: (id) => {
+    set((state) => {
+      const updated = state.notifications.map((n) =>
+        n.id === id ? { ...n, read: true } : n
+      );
+      return {
+        notifications: updated,
+        unreadCount: updated.filter((n) => !n.read).length
+      };
+    });
+  },
+
+  markAllNotificationsAsRead: () => {
+    set((state) => ({
+      notifications: state.notifications.map((n) => ({ ...n, read: true })),
+      unreadCount: 0
+    }));
+  },
+
+  addNotification: (notif) => {
+    const newNotif: AppNotification = {
+      ...notif,
+      id: `notif-${Date.now()}`,
+      timestamp: 'Baru saja',
+      read: false
+    };
+    set((state) => ({
+      notifications: [newNotif, ...state.notifications],
+      unreadCount: state.unreadCount + 1
+    }));
   },
 }));

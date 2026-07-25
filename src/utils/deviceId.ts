@@ -1,9 +1,13 @@
+// src/utils/deviceId.ts
 export const getDeviceId = (): string => {
-    let deviceId = localStorage.getItem('gosiaga_device_id');
-    if (!deviceId) {
-      const randomNum = Math.floor(1000 + Math.random() * 9000);
-      deviceId = `Reporter #${randomNum}`;
-      localStorage.setItem('gosiaga_device_id', deviceId);
-    }
-    return deviceId;
-  };
+  if (typeof window === 'undefined') return 'Reporter #0000';
+  let id = localStorage.getItem('gosiaga_device_id');
+  if (!id) {
+    const randomNum = Math.floor(1000 + Math.random() * 9000);
+    id = `Reporter #${randomNum}`;
+    localStorage.setItem('gosiaga_device_id', id);
+  }
+  return id;
+};
+
+export const deviceId = getDeviceId();
