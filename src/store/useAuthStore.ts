@@ -21,10 +21,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ isLoading: true, error: null });
     
     try {
-      // Simulasi pemanggilan API otentikasi (delay 1.5 detik)
       await new Promise((resolve) => setTimeout(resolve, 1500));
-      
-      // Mock validasi sederhana
       if (!email.includes('@')) {
         throw new Error('Format email tidak valid.');
       }

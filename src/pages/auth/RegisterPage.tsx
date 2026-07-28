@@ -22,7 +22,6 @@ export const RegisterPage: React.FC = () => {
       return;
     }
 
-    // Simulasi Pendaftaran berhasil dan langsung login
     await login(email, 'CITIZEN');
     navigate('/map');
   };

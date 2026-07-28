@@ -22,7 +22,7 @@ export const CommentSection: React.FC<{ reportId: string }> = ({ reportId }) => 
         <h3 className="font-bold text-sm">Diskusi Warga ({report?.comments?.length || 0})</h3>
       </div>
 
-      {/* Comment List */}
+      { }
       <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
         {report?.comments?.map((c) => (
           <div key={c.id} className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700/50">
@@ -41,7 +41,7 @@ export const CommentSection: React.FC<{ reportId: string }> = ({ reportId }) => 
         )}
       </div>
 
-      {/* Input Komentar */}
+      { }
       <form onSubmit={handleSubmit} className="flex gap-2">
         <input
           type="text"

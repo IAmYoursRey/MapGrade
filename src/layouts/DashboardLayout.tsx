@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { ShieldAlert, LayoutDashboard, Map, Users, LogOut, Menu, X } from 'lucide-react';
+import { ShieldAlert, LayoutDashboard, Users, LogOut, Menu, X, Sun, Moon } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
-import { NotificationDropdown } from '@/components/common/NotificationDropdown'; // 👈 Import Notifikasi di sini
+import { useThemeStore } from '@/store/useThemeStore';
+import { NotificationDropdown } from '@/components/common/NotificationDropdown'; 
 
 export const DashboardLayout: React.FC = () => {
   const { user, logout } = useAuthStore();
+  const { isDarkMode, toggleTheme } = useThemeStore();
   const location = useLocation();
   const navigate = useNavigate();
   
@@ -13,13 +15,11 @@ export const DashboardLayout: React.FC = () => {
 
   const navItems = [
     { path: '/dashboard/bpbd', label: 'Command Center', icon: LayoutDashboard },
-    { path: '/analytics/heatmap', label: 'Heatmap Zonasi', icon: Map },
     { path: '/dashboard/admin', label: 'Manajemen User', icon: Users },
   ];
 
   const toggleMobileMenu = () => setIsMobileMenuOpen((prev) => !prev);
 
-  // Fungsi Keluar Sistem yang diarahkan ke halaman utama
   const handleLogout = () => {
     setIsMobileMenuOpen(false);
     logout();
@@ -28,7 +28,7 @@ export const DashboardLayout: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex flex-col md:flex-row text-slate-800 dark:text-slate-100 relative">
-      {/* Sidebar Desktop */}
+      { }
       <aside className="w-64 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 flex flex-col hidden md:flex shrink-0">
         <div className="p-6 border-b border-slate-200 dark:border-slate-700">
           <Link to="/" className="flex items-center gap-2 group">
@@ -80,12 +80,12 @@ export const DashboardLayout: React.FC = () => {
         </div>
       </aside>
 
-      {/* Main Area */}
+      { }
       <main className="flex-1 flex flex-col h-screen overflow-hidden">
-        {/* Top Header */}
+        { }
         <header className="h-16 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 flex items-center justify-between px-4 md:px-8 shrink-0 z-[900] relative">
           <div className="flex items-center gap-3">
-            {/* Tombol Menu Khusus HP */}
+            { }
             <button
               type="button"
               onClick={toggleMobileMenu}
@@ -100,13 +100,20 @@ export const DashboardLayout: React.FC = () => {
             </h1>
           </div>
 
-          <div className="flex items-center gap-3">
-            {/* 🔔 KOMPONEN NOTIFIKASI AKTIF MENGGANTIKAN DUMMY BELL */}
+          <div className="flex items-center gap-2 md:gap-3">
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 transition-colors"
+              title="Toggle Dark/Light Mode"
+            >
+              {isDarkMode ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5 text-slate-600" />}
+            </button>
+            { }
             <NotificationDropdown />
           </div>
         </header>
 
-        {/* Drawer Menu Navigasi Layar HP */}
+        {'/* Drawer Menu Navigasi Layar HP */'}
         {isMobileMenuOpen && (
           <div className="md:hidden fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-sm flex">
             <div className="w-4/5 max-w-xs bg-white dark:bg-slate-800 h-full shadow-2xl flex flex-col p-5 overflow-y-auto animate-in slide-in-from-left duration-200">

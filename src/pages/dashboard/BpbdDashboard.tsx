@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMapStore, ReportStatus, Report } from '@/store/useMapStore';
 import { StatusBadge } from '@/components/common/StatusBadge';
+import { ReportDrawer } from '@/features/report/ReportDrawer';
 import {
   AlertTriangle,
   Clock,
@@ -95,7 +96,7 @@ export const BpbdDashboard: React.FC = () => {
 
   return (
     <div className="p-4 sm:p-6 md:p-8 max-w-7xl mx-auto space-y-6">
-      {/* HEADER UTAMA */}
+      { }
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white dark:bg-slate-800 p-5 sm:p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
         <div className="flex items-center gap-4">
           <button
@@ -123,7 +124,7 @@ export const BpbdDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Tombol Segarkan (Lonceng Notifikasi sudah dipindah ke Header Atas Layout) */}
+        { }
         <div className="flex items-center gap-3 self-end md:self-auto shrink-0">
           <button
             type="button"
@@ -137,7 +138,7 @@ export const BpbdDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* RINGKASAN KARTU STATISTIK */}
+      { }
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center gap-4">
           <div className="p-3 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-xl shrink-0">
@@ -190,7 +191,7 @@ export const BpbdDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* PANEL PENCARIAN & FILTER */}
+      { }
       <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-3">
         <div className="flex flex-col lg:flex-row gap-3 items-center justify-between">
           <div className="relative w-full lg:w-96">
@@ -273,7 +274,7 @@ export const BpbdDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* TABEL UTAMA LAPORAN BENCANA */}
+      { }
       <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
         <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50">
           <div className="flex items-center gap-2">
@@ -395,6 +396,7 @@ export const BpbdDashboard: React.FC = () => {
           </table>
         </div>
       </div>
+      <ReportDrawer />
     </div>
   );
 };

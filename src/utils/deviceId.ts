@@ -1,4 +1,3 @@
-// src/utils/deviceId.ts
 export const getDeviceId = (): string => {
   if (typeof window === 'undefined') return 'Reporter #0000';
   let id = localStorage.getItem('gosiaga_device_id');

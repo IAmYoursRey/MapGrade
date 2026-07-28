@@ -12,29 +12,21 @@ import {
 } from 'lucide-react';
 
 export const ReportFormModal: React.FC = () => {
-  // ... sisa isi kode tetap sama
   const { isFormOpen, setIsFormOpen, addReport } = useMapStore();
-
-  // State Form (Hanya title yang wajib)
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<Report['category']>('BANJIR');
   const [description, setDescription] = useState('');
   const [casualties, setCasualties] = useState('');
   const [damage, setDamage] = useState('');
   const [contact, setContact] = useState('');
-
-  // State GPS & Lokasi
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [gpsStatus, setGpsStatus] = useState<'idle' | 'loading' | 'success' | 'denied'>('idle');
   const [gpsErrorMsg, setGpsErrorMsg] = useState('');
-
-  // State Media Upload
   const [photos, setPhotos] = useState<string[]>([]);
   const [videos, setVideos] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
-  // 1. Minta Izin GPS Otomatis saat Modal Dibuka
   useEffect(() => {
     if (isFormOpen) {
       requestLocation();
@@ -50,7 +42,7 @@ export const ReportFormModal: React.FC = () => {
     if (!navigator.geolocation) {
       setGpsStatus('denied');
       setGpsErrorMsg('Browser Anda tidak mendukung fitur Geolocation GPS.');
-      setCoords({ lat: -7.2575, lng: 112.7521 }); // Fallback default (Surabaya)
+      setCoords({ lat: -7.2575, lng: 112.7521 });
       return;
     }
 
@@ -64,7 +56,7 @@ export const ReportFormModal: React.FC = () => {
       },
       (error) => {
         setGpsStatus('denied');
-        setCoords({ lat: -7.2575, lng: 112.7521 }); // Fallback jika ditolak
+        setCoords({ lat: -7.2575, lng: 112.7521 }); 
         switch (error.code) {
           case error.PERMISSION_DENIED:
             setGpsErrorMsg('Izin GPS ditolak. Menggunakan lokasi default peta.');
@@ -80,33 +72,34 @@ export const ReportFormModal: React.FC = () => {
       { enableHighAccuracy: true, timeout: 10000 }
     );
   };
-
-  // 2. Simulasi Upload Foto/Gambar
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
     setIsUploading(true);
-    setUploadProgress(20);
+    setUploadProgress(30);
 
-    // Simulasi Progress Upload
-    const timer = setInterval(() => {
-      setUploadProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(timer);
-          setIsUploading(false);
-          
-          // Konversi ke Object URL untuk Preview
-          const newPhotos = Array.from(files).map((file) => URL.createObjectURL(file));
-          setPhotos((prevPhotos) => [...prevPhotos, ...newPhotos]);
-          return 0;
+    const fileList = Array.from(files);
+    let loadedCount = 0;
+    const base64Photos: string[] = [];
+
+    fileList.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          base64Photos.push(event.target.result as string);
         }
-        return prev + 40;
-      });
-    }, 200);
+        loadedCount += 1;
+        setUploadProgress(Math.round((loadedCount / fileList.length) * 100));
+        if (loadedCount === fileList.length) {
+          setIsUploading(false);
+          setPhotos((prev) => [...prev, ...base64Photos]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
   };
 
-  // 3. Simulasi Upload Video
   const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -129,7 +122,6 @@ export const ReportFormModal: React.FC = () => {
     }, 300);
   };
 
-  // 4. Submit Form
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -145,7 +137,7 @@ export const ReportFormModal: React.FC = () => {
       description: description.trim() || 'Tidak ada deskripsi tambahan.',
       latitude: coords?.lat || -7.2575,
       longitude: coords?.lng || 112.7521,
-      status: 'UNVERIFIED', // status default: 🔴 Baru
+      status: 'UNVERIFIED', 
       createdAt: new Date().toISOString(),
       photos: photos.length > 0 ? photos : ['https://images.unsplash.com/photo-1547683905-f686c993aae5?auto=format&fit=crop&q=80&w=800'],
       videos: videos,
@@ -184,7 +176,7 @@ export const ReportFormModal: React.FC = () => {
     <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm animate-in fade-in">
       <div className="relative w-full max-w-xl max-h-[90vh] overflow-y-auto bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl text-white p-6 space-y-6">
         
-        {/* Header Modal */}
+        { }
         <div className="flex items-center justify-between border-b border-slate-800 pb-4">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-red-500/20 text-red-500 rounded-2xl">
@@ -203,7 +195,7 @@ export const ReportFormModal: React.FC = () => {
           </button>
         </div>
 
-        {/* Panel Indikator GPS */}
+        { }
         <div className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/50 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <MapPin className={`w-5 h-5 ${gpsStatus === 'success' ? 'text-emerald-400' : 'text-amber-400'}`} />
@@ -234,10 +226,10 @@ export const ReportFormModal: React.FC = () => {
           )}
         </div>
 
-        {/* Form Input */}
+        { }
         <form onSubmit={handleSubmit} className="space-y-4">
           
-          {/* 🔴 JUDUL BENCANA (WAJIB) */}
+          { }
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
               Judul Kejadian <span className="text-red-500">* (Wajib)</span>
@@ -252,7 +244,7 @@ export const ReportFormModal: React.FC = () => {
             />
           </div>
 
-          {/* 🟡 JENIS BENCANA (OPSIONAL) */}
+          { }
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
               Jenis Bencana (Opsional)
@@ -272,7 +264,7 @@ export const ReportFormModal: React.FC = () => {
             </select>
           </div>
 
-          {/* 🟡 KRONOLOGI / DESKRIPSI (OPSIONAL) */}
+          { }
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
               Kronologi / Keterangan Tambahan (Opsional)
@@ -286,7 +278,7 @@ export const ReportFormModal: React.FC = () => {
             />
           </div>
 
-          {/* 🟡 ESTIMASI KORBAN & KERUSAKAN (OPSIONAL) */}
+          { }
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
@@ -314,14 +306,14 @@ export const ReportFormModal: React.FC = () => {
             </div>
           </div>
 
-          {/* 🟡 UPLOAD FOTO & VIDEO (OPSIONAL) */}
+          { }
           <div className="space-y-2">
             <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">
               Dokumentasi Foto / Video (Opsional)
             </label>
             
             <div className="flex gap-3">
-              {/* Tombol Kamera / Foto */}
+              { }
               <label className="flex-1 flex items-center justify-center gap-2 p-3 bg-slate-800 hover:bg-slate-700 border border-dashed border-slate-600 rounded-2xl cursor-pointer transition-all text-xs font-bold text-slate-300">
                 <Camera className="w-4 h-4 text-red-400" />
                 <span>+ Foto Galeri/Kamera</span>
@@ -334,7 +326,7 @@ export const ReportFormModal: React.FC = () => {
                 />
               </label>
 
-              {/* Tombol Video */}
+              { }
               <label className="flex-1 flex items-center justify-center gap-2 p-3 bg-slate-800 hover:bg-slate-700 border border-dashed border-slate-600 rounded-2xl cursor-pointer transition-all text-xs font-bold text-slate-300">
                 <Video className="w-4 h-4 text-blue-400" />
                 <span>+ Video Recording</span>
@@ -347,7 +339,7 @@ export const ReportFormModal: React.FC = () => {
               </label>
             </div>
 
-            {/* Progress Bar Upload */}
+            { }
             {isUploading && (
               <div className="space-y-1">
                 <div className="flex justify-between text-[10px] text-slate-400 font-bold">
@@ -363,7 +355,7 @@ export const ReportFormModal: React.FC = () => {
               </div>
             )}
 
-            {/* Preview Foto */}
+            { }
             {photos.length > 0 && (
               <div className="flex gap-2 overflow-x-auto py-2">
                 {photos.map((src, index) => (
@@ -382,7 +374,7 @@ export const ReportFormModal: React.FC = () => {
             )}
           </div>
 
-          {/* 🟡 KONTAK PELAPOR (OPSIONAL) */}
+          { }
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
               Nomor Telepon / WhatsApp (Opsional)
@@ -396,7 +388,7 @@ export const ReportFormModal: React.FC = () => {
             />
           </div>
 
-          {/* Action Buttons */}
+          { }
           <div className="flex gap-3 pt-4 border-t border-slate-800">
             <button
               type="button"

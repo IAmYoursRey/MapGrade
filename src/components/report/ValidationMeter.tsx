@@ -1,5 +1,4 @@
 import { ThumbsUp, ThumbsDown } from 'lucide-react';
-// Kita panggil store dan alat pengenal device
 import { useMapStore } from '../../store/useMapStore';
 import { getDeviceId } from '../../utils/deviceId';
 
@@ -9,25 +8,17 @@ interface ValidationMeterProps {
 }
 
 export const ValidationMeter = ({ validVotes: initialValid, invalidVotes: initialInvalid }: ValidationMeterProps) => {
-  // 1. Tarik laporan yang sedang dibuka dan fungsi validasinya dari Store
   const { selectedReport, handleValidation } = useMapStore();
-
-  // 2. Gunakan data REAL-TIME dari store. Jika tidak ada, baru pakai angka bawaan.
   const reportId = selectedReport?.id;
   const validVotes = selectedReport?.validationsCount ?? initialValid ?? 0;
   const invalidVotes = selectedReport?.invalidationsCount ?? initialInvalid ?? 0;
-
-  // 3. Cek apakah user kita sudah pernah menekan tombol ini (untuk efek warna menyala)
   const deviceId = getDeviceId();
   const hasVotedValid = selectedReport?.votedBy?.includes(deviceId);
   const hasVotedInvalid = selectedReport?.invalidatedBy?.includes(deviceId);
-
-  // 4. Kalkulasi Persentase Bar
   const totalVotes = validVotes + invalidVotes;
   const validPercentage = totalVotes === 0 ? 50 : Math.round((validVotes / totalVotes) * 100);
   const invalidPercentage = totalVotes === 0 ? 50 : 100 - validPercentage;
 
-  // 5. Eksekusi Tombol Valid / Hoaks
   const onValidClick = () => {
     if (!reportId) return;
     handleValidation(reportId, 'valid');
@@ -41,10 +32,10 @@ export const ValidationMeter = ({ validVotes: initialValid, invalidVotes: initia
   return (
     <div className="space-y-2 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700/60">
       
-      {/* Header Stat & Tombol Aksi */}
+      { }
       <div className="flex items-center justify-between text-xs">
         
-        {/* TOMBOL VALID */}
+        { }
         <button 
           onClick={onValidClick}
           disabled={!reportId}
@@ -58,7 +49,7 @@ export const ValidationMeter = ({ validVotes: initialValid, invalidVotes: initia
           <span>{validVotes} Valid</span>
         </button>
 
-        {/* TOMBOL HOAKS */}
+        { }
         <button 
           onClick={onInvalidClick}
           disabled={!reportId}
@@ -74,7 +65,7 @@ export const ValidationMeter = ({ validVotes: initialValid, invalidVotes: initia
 
       </div>
       
-      {/* Progress Bar Container */}
+      { }
       <div className="w-full bg-red-100 dark:bg-red-950/40 h-2 rounded-full overflow-hidden flex">
         <div 
           className="bg-emerald-500 h-full transition-all duration-500" 

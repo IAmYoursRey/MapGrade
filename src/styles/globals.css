@@ -3,12 +3,40 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
   body {
-    @apply antialiased font-sans selection:bg-red-500 selection:text-white;
+    @apply antialiased selection:bg-red-500 selection:text-white bg-slate-900 text-slate-100;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    overflow-x: hidden;
   }
 }
 
-/* Glowing Red Animation for Dynamic Emergency Markers */
+/* Crisp rendering for MapLibre maps across Retina, Safari, Chrome & Firefox */
+.maplibregl-map {
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.maplibregl-canvas {
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
+
+/* Text wrap & break fixes for small screens */
+.break-word-safe {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  hyphens: auto;
+}
+
 @keyframes pulse-glow {
   0%, 100% {
     box-shadow: 0 0 15px rgba(229, 57, 53, 0.9), 0 0 30px rgba(229, 57, 53, 0.4);

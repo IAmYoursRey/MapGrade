@@ -1,180 +1,139 @@
 import React, { useEffect, useRef, useState } from 'react';
-import L from 'leaflet';
-// @ts-ignore
-import 'leaflet/dist/leaflet.css';
-import { useMapStore, ReportStatus, MapLayerType } from '@/store/useMapStore';
+import * as maplibregl from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
+import { useMapStore, MapLayerType } from '@/store/useMapStore';
 import { Layers, X } from 'lucide-react';
+import { setupMapLayers } from './setupMapLayers';
+
+const TILE_URLS: Record<string, { url: string; label: string }> = {
+  dark: {
+    url: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+    label: '🌙 Mode Gelap'
+  },
+  streets: {
+    url: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
+    label: '🗺️ Mode Jalan'
+  },
+  satellite: {
+    url: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+    label: '🛰️ Positron'
+  },
+};
+
+const FOG_CONFIG = {
+  'color': 'rgb(12, 20, 42)',
+  'high-color': 'rgb(20, 30, 60)',
+  'horizon-blend': 0.08,
+  'space-color': 'rgb(5, 8, 18)',
+  'star-intensity': 0.6,
+};
 
 export const InteractiveMap: React.FC = () => {
   const mapRef = useRef<HTMLDivElement>(null);
-  const leafletMap = useRef<L.Map | null>(null);
-  const markersRef = useRef<{ [id: string]: L.Marker }>({});
-  const circlesRef = useRef<{ [id: string]: L.Circle }>({});
+  const mapInstance = useRef<maplibregl.Map | null>(null);
 
   const store = useMapStore();
   const reports = store.reports || [];
   const activeLayer = store.activeLayer || 'dark';
-
   const setSelectedReport = store.setSelectedReport || store.setSelectedReportId;
   const setIsDrawerOpen = store.setIsDrawerOpen;
   const setActiveLayer = store.setActiveLayer;
 
   const [showLayerSelector, setShowLayerSelector] = useState(false);
 
-  const tileUrls: Record<string, { url: string; attr: string }> = {
-    dark: {
-      url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-      attr: '&copy; CartoDB'
-    },
-    streets: {
-      url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-      attr: '&copy; OpenStreetMap'
-    },
-    satellite: {
-      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-      attr: '&copy; Esri'
-    },
-    heatmap: {
-      url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-      attr: '&copy; CartoDB'
-    }
-  };
-
-  const currentTile = tileUrls[activeLayer] || tileUrls.dark;
-
-  const getMarkerColor = (status: ReportStatus) => {
-    switch (status) {
-      case 'UNVERIFIED': return '#ef4444';
-      case 'NEEDS_REVIEW': return '#f59e0b';
-      case 'IN_PROGRESS': return '#3b82f6';
-      case 'RESOLVED': return '#10b981';
-      default: return '#6b7280';
-    }
-  };
+  // Keep a stable ref to the click callback so we don't re-register listeners
+  const onReportClickRef = useRef((report: any) => {
+    if (typeof setSelectedReport === 'function') setSelectedReport(report);
+    if (typeof setIsDrawerOpen === 'function') setIsDrawerOpen(true);
+  });
 
   useEffect(() => {
-    if (!mapRef.current || leafletMap.current) return;
+    onReportClickRef.current = (report: any) => {
+      if (typeof setSelectedReport === 'function') setSelectedReport(report);
+      if (typeof setIsDrawerOpen === 'function') setIsDrawerOpen(true);
+    };
+  }, [setSelectedReport, setIsDrawerOpen]);
 
-    leafletMap.current = L.map(mapRef.current, {
-      center: [-7.2575, 112.7521],
-      zoom: 13,
-      zoomControl: false
+  // Initialize map once
+  useEffect(() => {
+    if (!mapRef.current || mapInstance.current) return;
+
+    const map = new (maplibregl as any).Map({
+      container: mapRef.current,
+      style: TILE_URLS[activeLayer]?.url || TILE_URLS.dark.url,
+      center: [112.7521, -7.2575],
+      zoom: 10,
+      projection: { type: 'globe' },
+      antialias: true,
+      maxZoom: 19,
+      attributionControl: false,
+    }) as maplibregl.Map;
+
+    map.addControl(new maplibregl.NavigationControl({ showCompass: true, showZoom: true, visualizePitch: true }), 'bottom-right');
+    map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
+    map.dragRotate.enable();
+    map.touchPitch.enable();
+
+    // Apply atmosphere / globe fog on every style load (including style changes)
+    map.on('style.load', () => {
+      (map as any).setFog(FOG_CONFIG);
     });
 
-    L.tileLayer(currentTile.url, {
-      attribution: currentTile.attr
-    }).addTo(leafletMap.current);
+    mapInstance.current = map;
 
     return () => {
-      leafletMap.current?.remove();
-      leafletMap.current = null;
+      mapInstance.current?.remove();
+      mapInstance.current = null;
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Handle tile layer change
   useEffect(() => {
-    if (!leafletMap.current) return;
-    leafletMap.current.eachLayer((layer) => {
-      if (layer instanceof L.TileLayer) {
-        leafletMap.current?.removeLayer(layer);
-      }
-    });
-    L.tileLayer(currentTile.url, {
-      attribution: currentTile.attr
-    }).addTo(leafletMap.current);
+    if (!mapInstance.current) return;
+    const styleUrl = TILE_URLS[activeLayer]?.url || TILE_URLS.dark.url;
+    mapInstance.current.setStyle(styleUrl);
+    // Layers will be re-added automatically via the reports useEffect below
+    // because setupMapLayers waits for style.load internally.
   }, [activeLayer]);
 
+  // Sync reports → map layers whenever reports or map changes
   useEffect(() => {
-    if (!leafletMap.current) return;
-
-    Object.values(markersRef.current).forEach((m) => m.remove());
-    Object.values(circlesRef.current).forEach((c) => c.remove());
-    markersRef.current = {};
-    circlesRef.current = {};
-
-    reports.forEach((report) => {
-      const color = getMarkerColor(report.status);
-
-      if (activeLayer === 'heatmap') {
-        const circle = L.circle([report.latitude, report.longitude], {
-          color: color,
-          fillColor: color,
-          fillOpacity: 0.25,
-          radius: 50,
-          weight: 1.5
-        }).addTo(leafletMap.current!);
-
-        circlesRef.current[report.id] = circle;
-      }
-
-      const customIcon = L.divIcon({
-        className: 'custom-marker-pin',
-        html: `
-          <div style="
-            width: 22px; 
-            height: 22px; 
-            background-color: ${color}; 
-            border: 2px solid white; 
-            border-radius: 50%; 
-            box-shadow: 0 0 10px ${color}; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center;
-            cursor: pointer;
-          ">
-            <div style="width: 5px; height: 5px; background: white; border-radius: 50%;"></div>
-          </div>
-        `,
-        iconSize: [22, 22],
-        iconAnchor: [11, 11]
-      });
-
-      const marker = L.marker([report.latitude, report.longitude], { icon: customIcon })
-        .addTo(leafletMap.current!)
-        .on('click', () => {
-          if (typeof setSelectedReport === 'function') setSelectedReport(report);
-          if (typeof setIsDrawerOpen === 'function') setIsDrawerOpen(true);
-          leafletMap.current?.flyTo([report.latitude, report.longitude], 17, { duration: 1.2 });
-        });
-
-      markersRef.current[report.id] = marker;
-    });
-  }, [reports, activeLayer, setSelectedReport, setIsDrawerOpen]);
+    if (!mapInstance.current) return;
+    setupMapLayers(mapInstance.current, reports, (r) => onReportClickRef.current(r));
+  }, [reports]);
 
   return (
     <div className="relative w-full h-full">
-      <div ref={mapRef} className="w-full h-full z-0 bg-slate-900" />
+      <div ref={mapRef} className="relative w-full h-full z-0 bg-slate-950" />
 
-      <div className="absolute top-6 right-6 z-[1000]">
+      {/* Layer Selector */}
+      <div className="absolute top-3 right-3 sm:top-6 sm:right-6 z-[1000]">
         <button
           onClick={() => setShowLayerSelector(!showLayerSelector)}
-          className="p-3 bg-white dark:bg-slate-800 text-slate-800 dark:text-white rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 flex items-center gap-2 hover:bg-slate-50 transition-all font-bold text-xs"
+          className="p-2.5 sm:p-3 bg-white dark:bg-slate-800 text-slate-800 dark:text-white rounded-xl sm:rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 flex items-center gap-2 hover:bg-slate-50 transition-all font-bold text-xs"
         >
-          <Layers className="w-5 h-5 text-red-500" />
-          Layer Peta
+          <Layers className="w-4 h-4 sm:w-5 sm:h-5 text-red-500" />
+          <span className="hidden sm:inline">Layer Peta</span>
         </button>
 
         {showLayerSelector && (
-          <div className="absolute right-0 mt-3 w-56 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 p-4 space-y-2 animate-in fade-in slide-in-from-top-2">
+          <div className="absolute right-0 mt-2 w-48 sm:w-56 bg-white dark:bg-slate-800 rounded-xl sm:rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 p-3 sm:p-4 space-y-2">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-700">
-              <span className="text-xs font-extrabold uppercase text-slate-500">Pilih Tampilan</span>
+              <span className="text-[10px] sm:text-xs font-extrabold uppercase text-slate-500">Pilih Tampilan</span>
               <button onClick={() => setShowLayerSelector(false)}>
                 <X className="w-4 h-4 text-slate-400" />
               </button>
             </div>
-            {[
-              { id: 'dark', label: '🌙 Mode Gelap' },
-              { id: 'streets', label: '🗺️ Mode Jalan' },
-              { id: 'satellite', label: '🛰️ Satelit' },
-              { id: 'heatmap', label: '🔥 Zonasi Bencana' },
-            ].map((layer) => (
+            {Object.entries(TILE_URLS).map(([id, layer]) => (
               <button
-                key={layer.id}
+                key={id}
                 onClick={() => {
-                  if (typeof setActiveLayer === 'function') setActiveLayer(layer.id as MapLayerType);
+                  if (typeof setActiveLayer === 'function') setActiveLayer(id as MapLayerType);
                   setShowLayerSelector(false);
                 }}
                 className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold transition-all ${
-                  activeLayer === layer.id
+                  activeLayer === id
                     ? 'bg-red-500 text-white shadow-md shadow-red-500/30'
                     : 'hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
                 }`}

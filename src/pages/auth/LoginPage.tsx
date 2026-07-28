@@ -17,7 +17,6 @@ export const LoginPage: React.FC = () => {
     clearError();
     
     await login(email, role);
-    // Jika login berhasil (disimulasikan), redirect ke dashboard yang sesuai
     if (!error) {
       const targetRoute = role === 'BPBD' ? '/dashboard/bpbd' : '/map';
       navigate(targetRoute);
@@ -26,7 +25,7 @@ export const LoginPage: React.FC = () => {
 
   return (
     <div className="min-h-[90vh] flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Background Ornaments */}
+      { }
       <div className="absolute top-0 right-0 w-96 h-96 bg-red-600/10 blur-[100px] rounded-full pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-96 h-96 bg-blue-600/10 blur-[100px] rounded-full pointer-events-none" />
 

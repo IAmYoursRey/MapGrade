@@ -22,7 +22,6 @@ export const useNotificationStore = create<NotificationState>((set) => ({
     const id = crypto.randomUUID();
     set((state) => ({ toasts: [...state.toasts, { ...toast, id }] }));
 
-    // Otomatis hapus toast setelah durasi habis (default 5 detik)
     if (toast.duration !== 0) {
       setTimeout(() => {
         set((state) => ({ toasts: state.toasts.filter((t) => t.id !== id) }));

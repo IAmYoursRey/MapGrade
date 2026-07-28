@@ -6,9 +6,9 @@ import { AnimatedCounter } from '@/components/common/AnimatedCounter';
 export const LandingPage: React.FC = () => {
   return (
     <div className="flex flex-col items-center justify-center w-full">
-      {/* 1. HERO SECTION */}
+      { }
       <section className="relative w-full min-h-[90vh] flex flex-col items-center justify-center overflow-hidden px-4 py-20 text-center">
-        {/* Background Glow Effect */}
+        { }
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-red-600/20 blur-[120px] rounded-full pointer-events-none" />
 
         <div className="relative z-10 max-w-4xl mx-auto flex flex-col items-center gap-6">
@@ -46,7 +46,7 @@ export const LandingPage: React.FC = () => {
           </div>
         </div>
 
-        {/* 2. HERO STATISTICS (Glassmorphism) */}
+        { }
         <div className="relative z-10 w-full max-w-5xl mx-auto mt-20 grid grid-cols-1 md:grid-cols-3 gap-6">
           <StatCard 
             icon={<Users className="w-6 h-6 text-blue-500" />}
@@ -66,7 +66,7 @@ export const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* 3. FITUR UNGGULAN (Features Section) */}
+      { }
       <section className="w-full bg-slate-100 dark:bg-slate-900/50 py-24 px-4 border-t border-slate-200 dark:border-slate-800">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
@@ -98,8 +98,6 @@ export const LandingPage: React.FC = () => {
     </div>
   );
 };
-
-// --- Sub-Komponen UI Internal (Khusus untuk Landing Page) ---
 
 const StatCard: React.FC<{ icon: React.ReactNode; value: React.ReactNode; label: string }> = ({ icon, value, label }) => (
   <div className="flex flex-col items-center justify-center p-6 rounded-2xl bg-white/60 dark:bg-slate-800/60 backdrop-blur-md border border-slate-200 dark:border-slate-700 shadow-xl">

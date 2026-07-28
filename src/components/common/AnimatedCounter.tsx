@@ -22,8 +22,7 @@ export const AnimatedCounter: React.FC<AnimatedCounterProps> = ({
     const animate = (currentTime: number) => {
       if (!startTime) startTime = currentTime;
       const progress = Math.min((currentTime - startTime) / duration, 1);
-      
-      // Menggunakan fungsi easeOutQuart agar perlambatan di akhir terlihat natural
+
       const easeOutProgress = 1 - Math.pow(1 - progress, 4);
       setCount(Math.floor(easeOutProgress * end));
 

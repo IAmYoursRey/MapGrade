@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 
 export type ReportStatus = 'UNVERIFIED' | 'NEEDS_REVIEW' | 'IN_PROGRESS' | 'RESOLVED' | 'ARCHIVED';
-export type MapLayerType = 'dark' | 'streets' | 'satellite' | 'heatmap';
+export type MapLayerType = 'dark' | 'streets' | 'satellite';
 
 export interface Comment {
   id: string;
@@ -9,6 +9,7 @@ export interface Comment {
   text: string;
   createdAt: string;
   likes: number;
+  photoUrl?: string;
 }
 
 export interface AppNotification {
@@ -54,7 +55,6 @@ export interface Report {
   aiSummary?: string;
 }
 
-// Device ID Permanen via localStorage
 export const getDeviceId = (): string => {
   if (typeof window === 'undefined') return 'Reporter #0000';
   let deviceId = localStorage.getItem('gosiaga_device_id');
@@ -73,9 +73,7 @@ export interface MapStore {
   isDrawerOpen: boolean;
   activeLayer: MapLayerType;
   activeCategory: string;
-  filterCategory?: string; // 👈 Menambahkan optional property agar MapContainer tidak error
-
-  // --- STATE NOTIFIKASI BARU ---
+  filterCategory?: string; 
   notifications: AppNotification[];
   unreadCount: number;
 
@@ -86,12 +84,10 @@ export interface MapStore {
   setActiveLayer: (layer: MapLayerType) => void;
   setActiveCategory: (cat: string) => void;
   addReport: (report: Report) => void;
-  addComment: (reportId: string, text: string) => void;
+  addComment: (reportId: string, text: string, photoUrl?: string) => void;
   toggleUpvote: (reportId: string) => void;
   handleValidation: (reportId: string, type: 'valid' | 'invalid') => void;
   updateReportStatus: (reportId: string, status: ReportStatus) => void;
-  
-  // --- FUNGSI NOTIFIKASI BARU ---
   markNotificationAsRead: (id: string) => void;
   markAllNotificationsAsRead: () => void;
   addNotification: (notif: Omit<AppNotification, 'id' | 'timestamp' | 'read'>) => void;
@@ -232,201 +228,33 @@ const INITIAL_REPORTS: Report[] = [
   }
 ];
 
-export const useMapStore = create<MapStore>((set, get) => ({
-  reports: INITIAL_REPORTS,
-  selectedReport: null,
-  isFormOpen: false,
-  isDrawerOpen: false,
-  activeLayer: 'dark',
-  activeCategory: 'ALL',
+import { io } from 'socket.io-client';
 
-  notifications: [
-    {
-      id: 'notif-1',
-      title: '🚨 Laporan Krisis Baru',
-      message: 'Banjir Luapan Sungai Kalimas membutuhkan penanganan segera.',
-      type: 'CRITICAL',
-      timestamp: '5 menit lalu',
-      read: false,
-      reportId: 'rep-1'
-    },
-    {
-      id: 'notif-2',
-      title: '✅ Status Diperbarui',
-      message: 'Tim BPBD telah meluncur ke lokasi Pohon Tumbang.',
-      type: 'SUCCESS',
-      timestamp: '20 menit lalu',
-      read: false,
-      reportId: 'rep-2'
-    }
-  ],
-  unreadCount: 2,
+const socket = io('http://localhost:3001');
 
-  setSelectedReport: (report) => set({ selectedReport: report }),
-  setSelectedReportId: (id) => {
-    if (!id) {
-      set({ selectedReport: null });
-      return;
-    }
-    const found = get().reports.find((r) => r.id === id) || null;
-    set({ selectedReport: found });
-  },
-  setIsFormOpen: (open) => set({ isFormOpen: open }),
-  setIsDrawerOpen: (open) => set({ isDrawerOpen: open }),
-  setActiveLayer: (layer) => set({ activeLayer: layer }),
-  setActiveCategory: (cat) => set({ activeCategory: cat }),
+export const useMapStore = create<MapStore>((set, get) => {
+  // Listen for socket events
+  socket.on('init_data', (data: Report[]) => {
+    set({ reports: data });
+  });
 
-  addReport: (newReport) => set((state) => ({ 
-    reports: [newReport, ...state.reports] 
-  })),
-
-  addComment: (reportId, text) => {
-    const authorId = getDeviceId();
-    const newComment: Comment = {
-      id: `c-${Date.now()}`,
-      authorId,
-      text,
-      createdAt: 'Baru saja',
-      likes: 0,
-    };
-
-    set((state) => ({
-      reports: state.reports.map((r) => {
-        if (r.id === reportId) {
-          const updatedComments = [...(r.comments || []), newComment];
-          const updatedTimeline = [
-            ...(r.timeline || []),
-            {
-              id: `t-${Date.now()}`,
-              title: `Tanggapan dari ${authorId}`,
-              time: 'Baru saja',
-              status: r.status,
-              description: text
-            }
-          ];
-          const updatedReport = {
-            ...r,
-            comments: updatedComments,
-            commentsCount: updatedComments.length,
-            timeline: updatedTimeline,
-          };
-          if (state.selectedReport?.id === reportId) {
-            set({ selectedReport: updatedReport });
-          }
-          return updatedReport;
-        }
-        return r;
-      }),
-    }));
-  },
-
-  toggleUpvote: (reportId) => {
-    set((state) => ({
-      reports: state.reports.map((r) => {
-        if (r.id === reportId) {
-          const updated = { 
-            ...r, 
-            upvotes: r.upvotes + 1, 
-            validationsCount: r.validationsCount + 1 
-          };
-          if (state.selectedReport?.id === reportId) {
-            set({ selectedReport: updated });
-          }
-          return updated;
-        }
-        return r;
-      }),
-    }));
-  },
-
-  handleValidation: (reportId: string, type: 'valid' | 'invalid') => {
-    const deviceId = getDeviceId();
-
+  socket.on('report_added', (report: Report) => {
     set((state) => {
-      const updatedReports = state.reports.map((r) => {
-        if (r.id === reportId) {
-          let newVotedBy = [...(r.votedBy || [])];
-          let newInvalidatedBy = [...(r.invalidatedBy || [])];
-
-          let newValidCount = r.validationsCount || 0;
-          let newInvalidCount = r.invalidationsCount || 0;
-
-          if (type === 'valid') {
-            if (newVotedBy.includes(deviceId)) {
-              newVotedBy = newVotedBy.filter((id) => id !== deviceId);
-              newValidCount -= 1;
-            } else {
-              newVotedBy.push(deviceId);
-              newValidCount += 1;
-              if (newInvalidatedBy.includes(deviceId)) {
-                newInvalidatedBy = newInvalidatedBy.filter((id) => id !== deviceId);
-                newInvalidCount -= 1;
-              }
-            }
-          } else if (type === 'invalid') {
-            if (newInvalidatedBy.includes(deviceId)) {
-              newInvalidatedBy = newInvalidatedBy.filter((id) => id !== deviceId);
-              newInvalidCount -= 1;
-            } else {
-              newInvalidatedBy.push(deviceId);
-              newInvalidCount += 1;
-              if (newVotedBy.includes(deviceId)) {
-                newVotedBy = newVotedBy.filter((id) => id !== deviceId);
-                newValidCount -= 1;
-              }
-            }
-          }
-
-          return {
-            ...r,
-            votedBy: newVotedBy,
-            invalidatedBy: newInvalidatedBy,
-            validationsCount: Math.max(0, newValidCount),
-            invalidationsCount: Math.max(0, newInvalidCount),
-          };
-        }
-        return r;
-      });
-
-      const updatedSelectedReport =
-        state.selectedReport?.id === reportId
-          ? updatedReports.find((r) => r.id === reportId) || state.selectedReport
-          : state.selectedReport;
-
-      return {
-        reports: updatedReports,
-        selectedReport: updatedSelectedReport,
-      };
+      const isExists = state.reports.find(r => r.id === report.id);
+      if (isExists) return state;
+      return { reports: [report, ...state.reports] };
     });
-  },
+  });
 
-  updateReportStatus: (reportId: string, status: ReportStatus) => {
+  socket.on('report_updated', (updatedReport: Report) => {
     set((state) => {
-      const updatedReports = state.reports.map((r) => {
-        if (r.id === reportId) {
-          const updatedTimeline = [
-            ...(r.timeline || []),
-            {
-              id: `t-${Date.now()}`,
-              title: `Status Diperbarui: ${status}`,
-              time: 'Baru saja',
-              status: status,
-              description: 'Status laporan telah diperbarui oleh Tim BPBD.'
-            }
-          ];
-
-          return {
-            ...r,
-            status,
-            timeline: updatedTimeline
-          };
-        }
-        return r;
-      });
-
+      const updatedReports = state.reports.map((r) => 
+        r.id === updatedReport.id ? updatedReport : r
+      );
+      
       const updatedSelectedReport =
-        state.selectedReport?.id === reportId
-          ? updatedReports.find((r) => r.id === reportId) || state.selectedReport
+        state.selectedReport?.id === updatedReport.id
+          ? updatedReport
           : state.selectedReport;
 
       return {
@@ -434,37 +262,183 @@ export const useMapStore = create<MapStore>((set, get) => ({
         selectedReport: updatedSelectedReport
       };
     });
-  },
+  });
 
-  markNotificationAsRead: (id) => {
-    set((state) => {
-      const updated = state.notifications.map((n) =>
-        n.id === id ? { ...n, read: true } : n
-      );
-      return {
-        notifications: updated,
-        unreadCount: updated.filter((n) => !n.read).length
+  return {
+    reports: INITIAL_REPORTS,
+    selectedReport: null,
+    isFormOpen: false,
+    isDrawerOpen: false,
+    activeLayer: 'dark',
+    activeCategory: 'ALL',
+
+    notifications: [
+      {
+        id: 'notif-1',
+        title: '🚨 Laporan Krisis Baru',
+        message: 'Banjir Luapan Sungai Kalimas membutuhkan penanganan segera.',
+        type: 'CRITICAL',
+        timestamp: '5 menit lalu',
+        read: false,
+        reportId: 'rep-1'
+      },
+      {
+        id: 'notif-2',
+        title: '✅ Status Diperbarui',
+        message: 'Tim BPBD telah meluncur ke lokasi Pohon Tumbang.',
+        type: 'SUCCESS',
+        timestamp: '20 menit lalu',
+        read: false,
+        reportId: 'rep-2'
+      }
+    ],
+    unreadCount: 2,
+
+    setSelectedReport: (report) => set({ selectedReport: report }),
+    setSelectedReportId: (id) => {
+      if (!id) {
+        set({ selectedReport: null });
+        return;
+      }
+      const found = get().reports.find((r) => r.id === id) || null;
+      set({ selectedReport: found });
+    },
+    setIsFormOpen: (open) => set({ isFormOpen: open }),
+    setIsDrawerOpen: (open) => set({ isDrawerOpen: open }),
+    setActiveLayer: (layer) => set({ activeLayer: layer }),
+    setActiveCategory: (cat) => set({ activeCategory: cat }),
+
+    addReport: (newReport) => {
+      socket.emit('add_report', newReport);
+      // Optimistic update
+      set((state) => ({ reports: [newReport, ...state.reports] }));
+    },
+
+    addComment: (reportId, text, photoUrl) => {
+      const authorId = getDeviceId();
+      const newComment: Comment = {
+        id: `c-${Date.now()}`,
+        authorId,
+        text,
+        photoUrl,
+        createdAt: 'Baru saja',
+        likes: 0,
       };
-    });
-  },
 
-  markAllNotificationsAsRead: () => {
-    set((state) => ({
-      notifications: state.notifications.map((n) => ({ ...n, read: true })),
-      unreadCount: 0
-    }));
-  },
+      socket.emit('add_comment', { reportId, comment: newComment });
+    },
 
-  addNotification: (notif) => {
-    const newNotif: AppNotification = {
-      ...notif,
-      id: `notif-${Date.now()}`,
-      timestamp: 'Baru saja',
-      read: false
-    };
-    set((state) => ({
-      notifications: [newNotif, ...state.notifications],
-      unreadCount: state.unreadCount + 1
-    }));
-  },
-}));
+    toggleUpvote: (reportId) => {
+      const report = get().reports.find((r) => r.id === reportId);
+      if (report) {
+        const updated = { 
+          ...report, 
+          upvotes: report.upvotes + 1, 
+          validationsCount: report.validationsCount + 1 
+        };
+        socket.emit('update_report', updated);
+      }
+    },
+
+    handleValidation: (reportId: string, type: 'valid' | 'invalid') => {
+      const deviceId = getDeviceId();
+      const report = get().reports.find((r) => r.id === reportId);
+      
+      if (report) {
+        let newVotedBy = [...(report.votedBy || [])];
+        let newInvalidatedBy = [...(report.invalidatedBy || [])];
+        let newValidCount = report.validationsCount || 0;
+        let newInvalidCount = report.invalidationsCount || 0;
+
+        if (type === 'valid') {
+          if (newVotedBy.includes(deviceId)) {
+            newVotedBy = newVotedBy.filter((id) => id !== deviceId);
+            newValidCount -= 1;
+          } else {
+            newVotedBy.push(deviceId);
+            newValidCount += 1;
+            if (newInvalidatedBy.includes(deviceId)) {
+              newInvalidatedBy = newInvalidatedBy.filter((id) => id !== deviceId);
+              newInvalidCount -= 1;
+            }
+          }
+        } else if (type === 'invalid') {
+          if (newInvalidatedBy.includes(deviceId)) {
+            newInvalidatedBy = newInvalidatedBy.filter((id) => id !== deviceId);
+            newInvalidCount -= 1;
+          } else {
+            newInvalidatedBy.push(deviceId);
+            newInvalidCount += 1;
+            if (newVotedBy.includes(deviceId)) {
+              newVotedBy = newVotedBy.filter((id) => id !== deviceId);
+              newValidCount -= 1;
+            }
+          }
+        }
+
+        const updated = {
+          ...report,
+          votedBy: newVotedBy,
+          invalidatedBy: newInvalidatedBy,
+          validationsCount: Math.max(0, newValidCount),
+          invalidationsCount: Math.max(0, newInvalidCount),
+        };
+        socket.emit('update_report', updated);
+      }
+    },
+
+    updateReportStatus: (reportId: string, status: ReportStatus) => {
+      const report = get().reports.find((r) => r.id === reportId);
+      if (report) {
+        const updatedTimeline = [
+          ...(report.timeline || []),
+          {
+            id: `t-${Date.now()}`,
+            title: `Status Diperbarui: ${status}`,
+            time: 'Baru saja',
+            status: status,
+            description: 'Status laporan telah diperbarui oleh Tim BPBD.'
+          }
+        ];
+        const updated = {
+          ...report,
+          status,
+          timeline: updatedTimeline
+        };
+        socket.emit('update_report', updated);
+      }
+    },
+
+    markNotificationAsRead: (id) => {
+      set((state) => {
+        const updated = state.notifications.map((n) =>
+          n.id === id ? { ...n, read: true } : n
+        );
+        return {
+          notifications: updated,
+          unreadCount: updated.filter((n) => !n.read).length
+        };
+      });
+    },
+
+    markAllNotificationsAsRead: () => {
+      set((state) => ({
+        notifications: state.notifications.map((n) => ({ ...n, read: true })),
+        unreadCount: 0
+      }));
+    },
+
+    addNotification: (notif) => {
+      const newNotif: AppNotification = {
+        ...notif,
+        id: `notif-${Date.now()}`,
+        timestamp: 'Baru saja',
+        read: false
+      };
+      set((state) => ({
+        notifications: [newNotif, ...state.notifications],
+        unreadCount: state.unreadCount + 1
+      }));
+    },
+  };
+});
