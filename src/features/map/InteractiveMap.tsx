@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { useMapStore, MapLayerType } from '@/store/useMapStore';
-import { Layers, X } from 'lucide-react';
+import { Layers, X, PlusPin, MapPin } from 'lucide-react';
 import { setupMapLayers } from './setupMapLayers';
 
 const MAP_STYLES: Record<string, { style: any; label: string }> = {
@@ -104,9 +104,12 @@ export const InteractiveMap: React.FC = () => {
   const activeLayer = store.activeLayer || 'dark';
   const setSelectedReport = store.setSelectedReport || store.setSelectedReportId;
   const setIsDrawerOpen = store.setIsDrawerOpen;
+  const setIsFormOpen = store.setIsFormOpen;
+  const setManualCoords = store.setManualCoords;
   const setActiveLayer = store.setActiveLayer;
 
   const [showLayerSelector, setShowLayerSelector] = useState(false);
+  const [isPinMode, setIsPinMode] = useState(false);
 
   const onReportClickRef = useRef((report: any) => {
     if (typeof setSelectedReport === 'function') setSelectedReport(report);
@@ -147,6 +150,17 @@ export const InteractiveMap: React.FC = () => {
       } catch (_) {}
     });
 
+    map.on('click', (e) => {
+      const features = map.queryRenderedFeatures(e.point, {
+        layers: ['clusters-core', 'unclustered-point']
+      });
+
+      if (!features || features.length === 0) {
+        setManualCoords({ lat: e.lngLat.lat, lng: e.lngLat.lng });
+        setIsFormOpen(true);
+      }
+    });
+
     mapInstance.current = map;
 
     return () => {
@@ -169,6 +183,13 @@ export const InteractiveMap: React.FC = () => {
   return (
     <section className="relative w-full h-full">
       <div ref={mapRef} className="relative w-full h-full z-0 bg-slate-950" />
+
+      <aside className="absolute top-3 left-3 sm:top-6 sm:left-6 z-[1000] flex items-center gap-2">
+        <article className="bg-slate-900/90 backdrop-blur-md px-3.5 py-2 rounded-xl sm:rounded-2xl border border-slate-800 shadow-xl flex items-center gap-2 text-xs font-semibold text-slate-300">
+          <MapPin className="w-4 h-4 text-red-500 animate-pulse" />
+          <span>Klik lokasi mana saja di peta untuk tandai bencana</span>
+        </article>
+      </aside>
 
       <aside className="absolute top-3 right-3 sm:top-6 sm:right-6 z-[1000]">
         <button

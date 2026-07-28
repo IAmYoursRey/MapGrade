@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 
 export const ReportFormModal: React.FC = () => {
-  const { isFormOpen, setIsFormOpen, addReport } = useMapStore();
+  const { isFormOpen, setIsFormOpen, addReport, manualCoords } = useMapStore();
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<Report['category']>('BANJIR');
   const [description, setDescription] = useState('');
@@ -20,7 +20,7 @@ export const ReportFormModal: React.FC = () => {
   const [damage, setDamage] = useState('');
   const [contact, setContact] = useState('');
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
-  const [gpsStatus, setGpsStatus] = useState<'idle' | 'loading' | 'success' | 'denied'>('idle');
+  const [gpsStatus, setGpsStatus] = useState<'idle' | 'loading' | 'success' | 'denied' | 'manual'>('idle');
   const [gpsErrorMsg, setGpsErrorMsg] = useState('');
   const [photos, setPhotos] = useState<string[]>([]);
   const [videos, setVideos] = useState<string[]>([]);
@@ -29,11 +29,16 @@ export const ReportFormModal: React.FC = () => {
 
   useEffect(() => {
     if (isFormOpen) {
-      requestLocation();
+      if (manualCoords) {
+        setCoords(manualCoords);
+        setGpsStatus('manual');
+      } else {
+        requestLocation();
+      }
     } else {
       resetForm();
     }
-  }, [isFormOpen]);
+  }, [isFormOpen, manualCoords]);
 
   const requestLocation = () => {
     setGpsStatus('loading');
@@ -72,6 +77,7 @@ export const ReportFormModal: React.FC = () => {
       { enableHighAccuracy: true, timeout: 10000 }
     );
   };
+
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -140,7 +146,7 @@ export const ReportFormModal: React.FC = () => {
       status: 'UNVERIFIED', 
       createdAt: new Date().toISOString(),
       photos: photos.length > 0 ? photos : ['https://images.unsplash.com/photo-1547683905-f686c993aae5?auto=format&fit=crop&q=80&w=800'],
-      videos: videos,
+      videos,
       casualties: casualties ? parseInt(casualties) : 0,
       damage: damage || '-',
       contactPhone: contact || '-',
@@ -175,13 +181,11 @@ export const ReportFormModal: React.FC = () => {
   return (
     <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm animate-in fade-in">
       <div className="relative w-full max-w-xl max-h-[90vh] overflow-y-auto bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl text-white p-6 space-y-6">
-        
-        { }
-        <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+        <header className="flex items-center justify-between border-b border-slate-800 pb-4">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-red-500/20 text-red-500 rounded-2xl">
+            <figure className="p-2.5 bg-red-500/20 text-red-500 rounded-2xl">
               <AlertTriangle className="w-6 h-6" />
-            </div>
+            </figure>
             <div>
               <h2 className="text-lg font-bold">Lapor Bencana Darurat</h2>
               <p className="text-xs text-slate-400">Isi informasi bencana dengan cepat dan akurat</p>
@@ -193,16 +197,16 @@ export const ReportFormModal: React.FC = () => {
           >
             <X className="w-5 h-5" />
           </button>
-        </div>
+        </header>
 
-        { }
-        <div className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/50 flex items-center justify-between">
+        <section className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/50 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <MapPin className={`w-5 h-5 ${gpsStatus === 'success' ? 'text-emerald-400' : 'text-amber-400'}`} />
+            <MapPin className={`w-5 h-5 ${gpsStatus === 'success' || gpsStatus === 'manual' ? 'text-emerald-400' : 'text-amber-400'}`} />
             <div>
               <p className="text-xs font-bold">
                 {gpsStatus === 'loading' && 'Mendeteksi Lokasi GPS...'}
                 {gpsStatus === 'success' && 'Lokasi GPS Berhasil Dideteksi'}
+                {gpsStatus === 'manual' && 'Lokasi Ditandai Manual di Peta'}
                 {gpsStatus === 'denied' && 'GPS Terkendala (Menggunakan Lokasi Default)'}
               </p>
               {coords && (
@@ -221,17 +225,14 @@ export const ReportFormModal: React.FC = () => {
               onClick={requestLocation}
               className="px-3 py-1.5 text-[11px] font-bold bg-slate-700 hover:bg-slate-600 rounded-xl transition-all"
             >
-              Ulangi GPS
+              Deteksi GPS
             </button>
           )}
-        </div>
+        </section>
 
-        { }
         <form onSubmit={handleSubmit} className="space-y-4">
-          
-          { }
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
+          <fieldset className="space-y-1">
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-300">
               Judul Kejadian <span className="text-red-500">* (Wajib)</span>
             </label>
             <input
@@ -242,11 +243,10 @@ export const ReportFormModal: React.FC = () => {
               onChange={(e) => setTitle(e.target.value)}
               className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-2xl text-sm focus:outline-none focus:border-red-500 transition-all placeholder:text-slate-500"
             />
-          </div>
+          </fieldset>
 
-          { }
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+          <fieldset className="space-y-1">
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">
               Jenis Bencana (Opsional)
             </label>
             <select
@@ -262,11 +262,10 @@ export const ReportFormModal: React.FC = () => {
               <option value="TSUNAMI">🌊 Tsunami</option>
               <option value="LAINNYA">⚠️ Bencana Lainnya</option>
             </select>
-          </div>
+          </fieldset>
 
-          { }
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+          <fieldset className="space-y-1">
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">
               Kronologi / Keterangan Tambahan (Opsional)
             </label>
             <textarea
@@ -276,12 +275,11 @@ export const ReportFormModal: React.FC = () => {
               onChange={(e) => setDescription(e.target.value)}
               className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-2xl text-sm focus:outline-none focus:border-red-500 transition-all placeholder:text-slate-500"
             />
-          </div>
+          </fieldset>
 
-          { }
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+          <section className="grid grid-cols-2 gap-3">
+            <fieldset className="space-y-1">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">
                 Estimasi Korban (Opsional)
               </label>
               <input
@@ -291,9 +289,9 @@ export const ReportFormModal: React.FC = () => {
                 onChange={(e) => setCasualties(e.target.value)}
                 className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-2xl text-sm focus:outline-none focus:border-red-500 transition-all placeholder:text-slate-500"
               />
-            </div>
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+            </fieldset>
+            <fieldset className="space-y-1">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">
                 Dampak Kerusakan (Opsional)
               </label>
               <input
@@ -303,17 +301,15 @@ export const ReportFormModal: React.FC = () => {
                 onChange={(e) => setDamage(e.target.value)}
                 className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-2xl text-sm focus:outline-none focus:border-red-500 transition-all placeholder:text-slate-500"
               />
-            </div>
-          </div>
+            </fieldset>
+          </section>
 
-          { }
-          <div className="space-y-2">
+          <section className="space-y-2">
             <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">
               Dokumentasi Foto / Video (Opsional)
             </label>
             
             <div className="flex gap-3">
-              { }
               <label className="flex-1 flex items-center justify-center gap-2 p-3 bg-slate-800 hover:bg-slate-700 border border-dashed border-slate-600 rounded-2xl cursor-pointer transition-all text-xs font-bold text-slate-300">
                 <Camera className="w-4 h-4 text-red-400" />
                 <span>+ Foto Galeri/Kamera</span>
@@ -326,7 +322,6 @@ export const ReportFormModal: React.FC = () => {
                 />
               </label>
 
-              { }
               <label className="flex-1 flex items-center justify-center gap-2 p-3 bg-slate-800 hover:bg-slate-700 border border-dashed border-slate-600 rounded-2xl cursor-pointer transition-all text-xs font-bold text-slate-300">
                 <Video className="w-4 h-4 text-blue-400" />
                 <span>+ Video Recording</span>
@@ -339,7 +334,6 @@ export const ReportFormModal: React.FC = () => {
               </label>
             </div>
 
-            { }
             {isUploading && (
               <div className="space-y-1">
                 <div className="flex justify-between text-[10px] text-slate-400 font-bold">
@@ -355,11 +349,10 @@ export const ReportFormModal: React.FC = () => {
               </div>
             )}
 
-            { }
             {photos.length > 0 && (
               <div className="flex gap-2 overflow-x-auto py-2">
                 {photos.map((src, index) => (
-                  <div key={index} className="relative w-16 h-16 rounded-xl overflow-hidden border border-slate-700 shrink-0">
+                  <figure key={index} className="relative w-16 h-16 rounded-xl overflow-hidden border border-slate-700 shrink-0">
                     <img src={src} alt="Preview" className="w-full h-full object-cover" />
                     <button
                       type="button"
@@ -368,15 +361,14 @@ export const ReportFormModal: React.FC = () => {
                     >
                       <Trash2 className="w-3 h-3" />
                     </button>
-                  </div>
+                  </figure>
                 ))}
               </div>
             )}
-          </div>
+          </section>
 
-          { }
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+          <fieldset className="space-y-1">
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">
               Nomor Telepon / WhatsApp (Opsional)
             </label>
             <input
@@ -386,10 +378,9 @@ export const ReportFormModal: React.FC = () => {
               onChange={(e) => setContact(e.target.value)}
               className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-2xl text-sm focus:outline-none focus:border-red-500 transition-all placeholder:text-slate-500"
             />
-          </div>
+          </fieldset>
 
-          { }
-          <div className="flex gap-3 pt-4 border-t border-slate-800">
+          <footer className="flex gap-3 pt-4 border-t border-slate-800">
             <button
               type="button"
               onClick={() => setIsFormOpen(false)}
@@ -404,8 +395,7 @@ export const ReportFormModal: React.FC = () => {
               <Upload className="w-4 h-4" />
               Kirim Laporan Bencana
             </button>
-          </div>
-
+          </footer>
         </form>
       </div>
     </div>

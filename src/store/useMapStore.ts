@@ -69,6 +69,7 @@ export const getDeviceId = (): string => {
 export interface MapStore {
   reports: Report[];
   selectedReport: Report | null;
+  manualCoords: { lat: number; lng: number } | null;
   isFormOpen: boolean;
   isDrawerOpen: boolean;
   activeLayer: MapLayerType;
@@ -79,11 +80,13 @@ export interface MapStore {
 
   setSelectedReport: (report: Report | null) => void;
   setSelectedReportId: (id: string | null) => void;
+  setManualCoords: (coords: { lat: number; lng: number } | null) => void;
   setIsFormOpen: (open: boolean) => void;
   setIsDrawerOpen: (open: boolean) => void;
   setActiveLayer: (layer: MapLayerType) => void;
   setActiveCategory: (cat: string) => void;
   addReport: (report: Report) => void;
+  deleteReport: (reportId: string) => void;
   addComment: (reportId: string, text: string, photoUrl?: string) => void;
   toggleUpvote: (reportId: string) => void;
   handleValidation: (reportId: string, type: 'valid' | 'invalid') => void;
@@ -251,6 +254,7 @@ export const useMapStore = create<MapStore>((set, get) => {
   return {
     reports: getInitialReports(),
     selectedReport: null,
+    manualCoords: null,
     isFormOpen: false,
     isDrawerOpen: false,
     activeLayer: 'dark',
@@ -287,6 +291,7 @@ export const useMapStore = create<MapStore>((set, get) => {
       const found = get().reports.find((r) => r.id === id) || null;
       set({ selectedReport: found });
     },
+    setManualCoords: (coords) => set({ manualCoords: coords }),
     setIsFormOpen: (open) => set({ isFormOpen: open }),
     setIsDrawerOpen: (open) => set({ isDrawerOpen: open }),
     setActiveLayer: (layer) => set({ activeLayer: layer }),
@@ -296,7 +301,16 @@ export const useMapStore = create<MapStore>((set, get) => {
       set((state) => {
         const updated = [newReport, ...state.reports];
         saveReportsToStorage(updated);
-        return { reports: updated };
+        return { reports: updated, manualCoords: null };
+      });
+    },
+
+    deleteReport: (reportId) => {
+      set((state) => {
+        const updatedReports = state.reports.filter((r) => r.id !== reportId);
+        const updatedSelected = state.selectedReport?.id === reportId ? null : state.selectedReport;
+        saveReportsToStorage(updatedReports);
+        return { reports: updatedReports, selectedReport: updatedSelected };
       });
     },
 
