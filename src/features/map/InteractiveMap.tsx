@@ -5,19 +5,86 @@ import { useMapStore, MapLayerType } from '@/store/useMapStore';
 import { Layers, X } from 'lucide-react';
 import { setupMapLayers } from './setupMapLayers';
 
-const TILE_URLS: Record<string, { url: string; label: string }> = {
+const MAP_STYLES: Record<string, { style: any; label: string }> = {
   dark: {
-    url: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
-    label: '🌙 Mode Gelap'
+    label: '🌙 Mode Gelap',
+    style: {
+      version: 8,
+      sources: {
+        'carto-dark': {
+          type: 'raster',
+          tiles: [
+            'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+            'https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+            'https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+            'https://d.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'
+          ],
+          tileSize: 256,
+          attribution: '&copy; OpenStreetMap &copy; CARTO'
+        }
+      },
+      layers: [
+        {
+          id: 'carto-dark-layer',
+          type: 'raster',
+          source: 'carto-dark',
+          minzoom: 0,
+          maxzoom: 19
+        }
+      ]
+    }
   },
   streets: {
-    url: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
-    label: '🗺️ Mode Jalan'
+    label: '🗺️ Mode Jalan',
+    style: {
+      version: 8,
+      sources: {
+        'osm-tiles': {
+          type: 'raster',
+          tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+          tileSize: 256,
+          attribution: '&copy; OpenStreetMap'
+        }
+      },
+      layers: [
+        {
+          id: 'osm-layer',
+          type: 'raster',
+          source: 'osm-tiles',
+          minzoom: 0,
+          maxzoom: 19
+        }
+      ]
+    }
   },
   satellite: {
-    url: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
-    label: '🛰️ Positron'
-  },
+    label: '🛰️ Mode Terang',
+    style: {
+      version: 8,
+      sources: {
+        'carto-light': {
+          type: 'raster',
+          tiles: [
+            'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+            'https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+            'https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+            'https://d.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png'
+          ],
+          tileSize: 256,
+          attribution: '&copy; OpenStreetMap &copy; CARTO'
+        }
+      },
+      layers: [
+        {
+          id: 'carto-light-layer',
+          type: 'raster',
+          source: 'carto-light',
+          minzoom: 0,
+          maxzoom: 19
+        }
+      ]
+    }
+  }
 };
 
 const FOG_CONFIG = {
@@ -56,9 +123,11 @@ export const InteractiveMap: React.FC = () => {
   useEffect(() => {
     if (!mapRef.current || mapInstance.current) return;
 
+    const initialStyle = MAP_STYLES[activeLayer]?.style || MAP_STYLES.dark.style;
+
     const map = new (maplibregl as any).Map({
       container: mapRef.current,
-      style: TILE_URLS[activeLayer]?.url || TILE_URLS.dark.url,
+      style: initialStyle,
       center: [112.7521, -7.2575],
       zoom: 10,
       projection: { type: 'globe' },
@@ -73,7 +142,9 @@ export const InteractiveMap: React.FC = () => {
     map.touchPitch.enable();
 
     map.on('style.load', () => {
-      (map as any).setFog(FOG_CONFIG);
+      try {
+        (map as any).setFog(FOG_CONFIG);
+      } catch (_) {}
     });
 
     mapInstance.current = map;
@@ -86,8 +157,8 @@ export const InteractiveMap: React.FC = () => {
 
   useEffect(() => {
     if (!mapInstance.current) return;
-    const styleUrl = TILE_URLS[activeLayer]?.url || TILE_URLS.dark.url;
-    mapInstance.current.setStyle(styleUrl);
+    const targetStyle = MAP_STYLES[activeLayer]?.style || MAP_STYLES.dark.style;
+    mapInstance.current.setStyle(targetStyle);
   }, [activeLayer]);
 
   useEffect(() => {
@@ -116,7 +187,7 @@ export const InteractiveMap: React.FC = () => {
                 <X className="w-4 h-4 text-slate-400" />
               </button>
             </header>
-            {Object.entries(TILE_URLS).map(([id, layer]) => (
+            {Object.entries(MAP_STYLES).map(([id, layer]) => (
               <button
                 key={id}
                 onClick={() => {

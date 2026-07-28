@@ -12,6 +12,32 @@ import {
   ChevronRight, Filter
 } from 'lucide-react';
 
+const DARK_MAP_STYLE: any = {
+  version: 8,
+  sources: {
+    'carto-dark': {
+      type: 'raster',
+      tiles: [
+        'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+        'https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+        'https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+        'https://d.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'
+      ],
+      tileSize: 256,
+      attribution: '&copy; OpenStreetMap &copy; CARTO'
+    }
+  },
+  layers: [
+    {
+      id: 'carto-dark-layer',
+      type: 'raster',
+      source: 'carto-dark',
+      minzoom: 0,
+      maxzoom: 19
+    }
+  ]
+};
+
 const FOG_CONFIG = {
   'color': 'rgb(8, 12, 30)',
   'high-color': 'rgb(15, 22, 50)',
@@ -98,7 +124,7 @@ export const AnalyticsPage: React.FC = () => {
     if (!mapRef.current || mapInstance.current) return;
     const map = new (maplibregl as any).Map({
       container: mapRef.current,
-      style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+      style: DARK_MAP_STYLE,
       center: [113.9213, -0.7893],
       zoom: 4,
       projection: { type: 'globe' },
@@ -109,7 +135,11 @@ export const AnalyticsPage: React.FC = () => {
     map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
     map.dragRotate.enable();
     map.touchPitch.enable();
-    map.on('style.load', () => { (map as any).setFog(FOG_CONFIG); });
+    map.on('style.load', () => {
+      try {
+        (map as any).setFog(FOG_CONFIG);
+      } catch (_) {}
+    });
     mapInstance.current = map;
     return () => { mapInstance.current?.remove(); mapInstance.current = null; };
   }, []);
