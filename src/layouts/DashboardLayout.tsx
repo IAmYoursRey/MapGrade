@@ -1,21 +1,23 @@
 import React, { useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { ShieldAlert, LayoutDashboard, Users, LogOut, Menu, X, Sun, Moon } from 'lucide-react';
+import { ShieldAlert, LayoutDashboard, Users, LogOut, Menu, X, Sun, Moon, Edit3 } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useThemeStore } from '@/store/useThemeStore';
 import { NotificationDropdown } from '@/components/common/NotificationDropdown'; 
 
 export const DashboardLayout: React.FC = () => {
-  const { user, logout } = useAuthStore();
+  const { user, logout, updateProfileName } = useAuthStore();
   const { isDarkMode, toggleTheme } = useThemeStore();
   const location = useLocation();
   const navigate = useNavigate();
   
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
+  const [isEditingUsername, setIsEditingUsername] = useState<boolean>(false);
+  const [newUsername, setNewUsername] = useState<string>('');
 
   const navItems = [
     { path: '/dashboard/bpbd', label: 'Command Center', icon: LayoutDashboard },
-    { path: '/dashboard/admin', label: 'Manajemen User', icon: Users },
+    { path: '/dashboard/admin', label: 'Manajemen User (Dev)', icon: Users },
   ];
 
   const toggleMobileMenu = () => setIsMobileMenuOpen((prev) => !prev);
@@ -24,6 +26,14 @@ export const DashboardLayout: React.FC = () => {
     setIsMobileMenuOpen(false);
     logout();
     navigate('/');
+  };
+
+  const handleSaveUsername = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newUsername.trim()) {
+      updateProfileName(newUsername.trim());
+      setIsEditingUsername(false);
+    }
   };
 
   return (
@@ -38,11 +48,20 @@ export const DashboardLayout: React.FC = () => {
               GoSiaga
             </span>
           </Link>
-          <section className="mt-4 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800/50">
-            <p className="text-xs font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider">
-              {user?.role || 'PETUGAS'}
+          <section className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800/50 space-y-1">
+            <p className="text-[10px] font-extrabold text-blue-700 dark:text-blue-400 uppercase tracking-wider">
+              {user?.role === 'DEV_UTAMA' ? 'DEV UTAMA (FULL ACCESS)' : (user?.role || 'PETUGAS')}
             </p>
-            <p className="text-sm font-semibold truncate">{user?.name || 'Raihan Ansari (Developer)'}</p>
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-bold truncate text-slate-800 dark:text-slate-100">{user?.name || 'Raihan Ansari'}</p>
+              <button
+                onClick={() => { setNewUsername(user?.name || ''); setIsEditingUsername(true); }}
+                className="p-1 text-slate-400 hover:text-red-500 transition-colors"
+                title="Ubah Username"
+              >
+                <Edit3 className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </section>
         </header>
 
@@ -71,7 +90,7 @@ export const DashboardLayout: React.FC = () => {
           <button 
             type="button"
             onClick={handleLogout}
-            className="flex items-center gap-3 px-4 py-3 w-full rounded-xl hover:bg-red-50 dark:hover:bg-red-500/10 text-slate-600 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 transition-colors text-sm font-medium cursor-pointer"
+            className="flex items-center gap-3 px-4 py-3 w-full rounded-xl hover:bg-red-50 dark:hover:bg-red-500/10 text-slate-600 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 transition-colors text-sm font-semibold cursor-pointer"
           >
             <LogOut className="w-5 h-5" />
             Keluar Sistem
@@ -105,6 +124,14 @@ export const DashboardLayout: React.FC = () => {
               {isDarkMode ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5 text-slate-600" />}
             </button>
             <NotificationDropdown />
+            <button
+              onClick={handleLogout}
+              className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-500 font-bold transition-all text-xs flex items-center gap-1.5 border border-red-500/30 shrink-0"
+              title="Keluar Akun"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline">Keluar</span>
+            </button>
           </div>
         </header>
 
@@ -129,12 +156,12 @@ export const DashboardLayout: React.FC = () => {
                 </button>
               </header>
 
-              <section className="my-4 px-3 py-2.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800/50">
+              <section className="my-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800/50">
                 <p className="text-xs font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider">
-                  {user?.role || 'PETUGAS'}
+                  {user?.role === 'DEV_UTAMA' ? 'DEV UTAMA' : (user?.role || 'PETUGAS')}
                 </p>
                 <p className="text-sm font-semibold truncate text-slate-800 dark:text-slate-100">
-                  {user?.name || 'Raihan Ansari (Developer)'}
+                  {user?.name || 'Raihan Ansari'}
                 </p>
               </section>
 
@@ -172,6 +199,51 @@ export const DashboardLayout: React.FC = () => {
               </footer>
             </nav>
             <div className="flex-1" onClick={() => setIsMobileMenuOpen(false)} />
+          </aside>
+        )}
+
+        {isEditingUsername && (
+          <aside className="fixed inset-0 z-[2500] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm">
+            <article className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4 text-white">
+              <header className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h3 className="text-sm font-bold flex items-center gap-2">
+                  <Edit3 className="w-4 h-4 text-red-500" />
+                  Ubah Username Akun
+                </h3>
+                <button onClick={() => setIsEditingUsername(false)}>
+                  <X className="w-4 h-4 text-slate-400" />
+                </button>
+              </header>
+
+              <form onSubmit={handleSaveUsername} className="space-y-4">
+                <fieldset className="space-y-1">
+                  <label className="text-xs text-slate-400 font-semibold">Username Baru</label>
+                  <input
+                    type="text"
+                    required
+                    value={newUsername}
+                    onChange={(e) => setNewUsername(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm outline-none focus:border-red-500"
+                  />
+                </fieldset>
+
+                <footer className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingUsername(false)}
+                    className="flex-1 py-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs font-bold text-slate-300"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-2 bg-red-600 hover:bg-red-500 rounded-xl text-xs font-bold text-white shadow-md shadow-red-600/30"
+                  >
+                    Simpan Nama
+                  </button>
+                </footer>
+              </form>
+            </article>
           </aside>
         )}
 

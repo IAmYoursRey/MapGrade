@@ -1,4 +1,4 @@
-export type UserRole = 'CITIZEN' | 'BPBD' | 'ADMIN' | 'VOLUNTEER' | 'MEDIA' | 'GUEST';
+export type UserRole = 'DEV_UTAMA' | 'BPBD' | 'ADMIN' | 'CITIZEN' | 'VOLUNTEER' | 'MEDIA' | 'GUEST';
 
 export type ReportStatus =
   | 'UNVERIFIED'
@@ -14,8 +14,10 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  password?: string;
   role: UserRole;
   avatarUrl?: string;
+  createdAt?: string;
 }
 
 export interface EmergencyReport {

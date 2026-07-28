@@ -153,7 +153,7 @@ export const AnalyticsPage: React.FC = () => {
 
   useEffect(() => {
     if (!mapInstance.current) return;
-    setupMapLayers(mapInstance.current, filteredReports, r => onReportClickRef.current(r));
+    setupMapLayers(mapInstance.current, filteredReports, r => onReportClickRef.current(r), true);
   }, [filteredReports]);
 
   const statCards = [

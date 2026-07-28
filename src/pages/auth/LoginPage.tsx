@@ -2,12 +2,10 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ShieldAlert, Mail, Lock, Loader2 } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
-import { UserRole } from '@/types';
 
 export const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<UserRole>('CITIZEN');
   
   const { login, isLoading, error, clearError } = useAuthStore();
   const navigate = useNavigate();
@@ -16,10 +14,12 @@ export const LoginPage: React.FC = () => {
     e.preventDefault();
     clearError();
     
-    const success = await login(email, password, role);
+    const success = await login(email, password);
     if (success) {
-      const userRole = useAuthStore.getState().user?.role;
-      const targetRoute = (userRole === 'BPBD' || userRole === 'ADMIN') ? '/dashboard/bpbd' : '/map';
+      const user = useAuthStore.getState().user;
+      const targetRoute = (user?.role === 'DEV_UTAMA' || user?.role === 'BPBD' || user?.role === 'ADMIN')
+        ? '/dashboard/bpbd'
+        : '/map';
       navigate(targetRoute);
     }
   };
@@ -35,7 +35,7 @@ export const LoginPage: React.FC = () => {
             <ShieldAlert className="w-7 h-7 text-white" />
           </figure>
           <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Selamat Datang Kembali</h2>
-          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Masuk untuk melanjutkan pelaporan dan verifikasi data bencana.</p>
+          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Masuk untuk melanjutkan pelaporan dan pemantauan data bencana.</p>
         </header>
 
         {error && (
@@ -73,19 +73,6 @@ export const LoginPage: React.FC = () => {
                 placeholder="••••••••"
               />
             </div>
-          </fieldset>
-
-          <fieldset className="space-y-1">
-            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Masuk Sebagai</label>
-            <select 
-              value={role}
-              onChange={(e) => setRole(e.target.value as UserRole)}
-              className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all outline-none text-slate-900 dark:text-white"
-            >
-              <option value="CITIZEN">Warga Sipil / Pelapor</option>
-              <option value="BPBD">Petugas Command Center BPBD</option>
-              <option value="ADMIN">Administrator Sistem</option>
-            </select>
           </fieldset>
 
           <button 

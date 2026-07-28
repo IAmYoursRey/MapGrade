@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { useMapStore, MapLayerType } from '@/store/useMapStore';
-import { Layers, X, PlusPin, MapPin } from 'lucide-react';
+import { Layers, X, MapPin } from 'lucide-react';
 import { setupMapLayers } from './setupMapLayers';
 
 const MAP_STYLES: Record<string, { style: any; label: string }> = {
@@ -109,7 +109,6 @@ export const InteractiveMap: React.FC = () => {
   const setActiveLayer = store.setActiveLayer;
 
   const [showLayerSelector, setShowLayerSelector] = useState(false);
-  const [isPinMode, setIsPinMode] = useState(false);
 
   const onReportClickRef = useRef((report: any) => {
     if (typeof setSelectedReport === 'function') setSelectedReport(report);
@@ -151,9 +150,12 @@ export const InteractiveMap: React.FC = () => {
     });
 
     map.on('click', (e) => {
-      const features = map.queryRenderedFeatures(e.point, {
-        layers: ['clusters-core', 'unclustered-point']
+      const targetLayers = ['clusters-core', 'unclustered-point'].filter(id => {
+        try { return map.getLayer(id); } catch { return false; }
       });
+      const features = targetLayers.length > 0
+        ? map.queryRenderedFeatures(e.point, { layers: targetLayers })
+        : [];
 
       if (!features || features.length === 0) {
         setManualCoords({ lat: e.lngLat.lat, lng: e.lngLat.lng });
@@ -177,7 +179,7 @@ export const InteractiveMap: React.FC = () => {
 
   useEffect(() => {
     if (!mapInstance.current) return;
-    setupMapLayers(mapInstance.current, reports, (r) => onReportClickRef.current(r));
+    setupMapLayers(mapInstance.current, reports, (r) => onReportClickRef.current(r), false);
   }, [reports]);
 
   return (

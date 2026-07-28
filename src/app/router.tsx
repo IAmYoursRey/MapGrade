@@ -6,11 +6,11 @@ import { MapPage } from '@/pages/MapPage';
 import { LoginPage } from '@/pages/auth/LoginPage';
 import { RegisterPage } from '@/pages/auth/RegisterPage';
 import { BpbdDashboard } from '@/pages/dashboard/BpbdDashboard';
+import { AdminDashboard } from '@/pages/dashboard/AdminDashboard';
 import { AnalyticsPage } from '@/pages/AnalyticsPage';
 
-const ProfilePage = () => <div className="p-8 text-center text-slate-500 font-bold">Halaman Profil (Dalam Pengembangan)</div>;
-const CitizenDashboard = () => <div className="p-8 text-center text-slate-500 font-bold">Dashboard Warga (Dalam Pengembangan)</div>;
-const AdminDashboard = () => <div className="p-8 text-center text-slate-500 font-bold">Dashboard Admin Sistem (Dalam Pengembangan)</div>;
+const ProfilePage = () => <div className="p-8 text-center text-slate-500 font-bold">Halaman Profil</div>;
+const CitizenDashboard = () => <div className="p-8 text-center text-slate-500 font-bold">Dashboard Warga</div>;
 const DocsPage = () => <div className="p-8 text-center text-slate-500 font-bold">Silakan merujuk pada file README.md di Repositori GitHub.</div>;
 
 export const router = createBrowserRouter([
