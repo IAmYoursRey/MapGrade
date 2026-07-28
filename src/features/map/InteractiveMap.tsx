@@ -41,7 +41,6 @@ export const InteractiveMap: React.FC = () => {
 
   const [showLayerSelector, setShowLayerSelector] = useState(false);
 
-  // Keep a stable ref to the click callback so we don't re-register listeners
   const onReportClickRef = useRef((report: any) => {
     if (typeof setSelectedReport === 'function') setSelectedReport(report);
     if (typeof setIsDrawerOpen === 'function') setIsDrawerOpen(true);
@@ -54,7 +53,6 @@ export const InteractiveMap: React.FC = () => {
     };
   }, [setSelectedReport, setIsDrawerOpen]);
 
-  // Initialize map once
   useEffect(() => {
     if (!mapRef.current || mapInstance.current) return;
 
@@ -74,7 +72,6 @@ export const InteractiveMap: React.FC = () => {
     map.dragRotate.enable();
     map.touchPitch.enable();
 
-    // Apply atmosphere / globe fog on every style load (including style changes)
     map.on('style.load', () => {
       (map as any).setFog(FOG_CONFIG);
     });
@@ -85,30 +82,24 @@ export const InteractiveMap: React.FC = () => {
       mapInstance.current?.remove();
       mapInstance.current = null;
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Handle tile layer change
   useEffect(() => {
     if (!mapInstance.current) return;
     const styleUrl = TILE_URLS[activeLayer]?.url || TILE_URLS.dark.url;
     mapInstance.current.setStyle(styleUrl);
-    // Layers will be re-added automatically via the reports useEffect below
-    // because setupMapLayers waits for style.load internally.
   }, [activeLayer]);
 
-  // Sync reports → map layers whenever reports or map changes
   useEffect(() => {
     if (!mapInstance.current) return;
     setupMapLayers(mapInstance.current, reports, (r) => onReportClickRef.current(r));
   }, [reports]);
 
   return (
-    <div className="relative w-full h-full">
+    <section className="relative w-full h-full">
       <div ref={mapRef} className="relative w-full h-full z-0 bg-slate-950" />
 
-      {/* Layer Selector */}
-      <div className="absolute top-3 right-3 sm:top-6 sm:right-6 z-[1000]">
+      <aside className="absolute top-3 right-3 sm:top-6 sm:right-6 z-[1000]">
         <button
           onClick={() => setShowLayerSelector(!showLayerSelector)}
           className="p-2.5 sm:p-3 bg-white dark:bg-slate-800 text-slate-800 dark:text-white rounded-xl sm:rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 flex items-center gap-2 hover:bg-slate-50 transition-all font-bold text-xs"
@@ -118,13 +109,13 @@ export const InteractiveMap: React.FC = () => {
         </button>
 
         {showLayerSelector && (
-          <div className="absolute right-0 mt-2 w-48 sm:w-56 bg-white dark:bg-slate-800 rounded-xl sm:rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 p-3 sm:p-4 space-y-2">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-700">
+          <nav className="absolute right-0 mt-2 w-48 sm:w-56 bg-white dark:bg-slate-800 rounded-xl sm:rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 p-3 sm:p-4 space-y-2">
+            <header className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-700">
               <span className="text-[10px] sm:text-xs font-extrabold uppercase text-slate-500">Pilih Tampilan</span>
               <button onClick={() => setShowLayerSelector(false)}>
                 <X className="w-4 h-4 text-slate-400" />
               </button>
-            </div>
+            </header>
             {Object.entries(TILE_URLS).map(([id, layer]) => (
               <button
                 key={id}
@@ -141,9 +132,9 @@ export const InteractiveMap: React.FC = () => {
                 {layer.label}
               </button>
             ))}
-          </div>
+          </nav>
         )}
-      </div>
-    </div>
+      </aside>
+    </section>
   );
 };

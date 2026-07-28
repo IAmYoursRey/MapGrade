@@ -28,24 +28,23 @@ export const DashboardLayout: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex flex-col md:flex-row text-slate-800 dark:text-slate-100 relative">
-      { }
       <aside className="w-64 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 flex flex-col hidden md:flex shrink-0">
-        <div className="p-6 border-b border-slate-200 dark:border-slate-700">
+        <header className="p-6 border-b border-slate-200 dark:border-slate-700">
           <Link to="/" className="flex items-center gap-2 group">
-            <div className="w-8 h-8 rounded-lg bg-red-600 flex items-center justify-center shadow-lg shadow-red-600/30">
+            <figure className="w-8 h-8 rounded-lg bg-red-600 flex items-center justify-center shadow-lg shadow-red-600/30">
               <ShieldAlert className="w-5 h-5 text-white" />
-            </div>
+            </figure>
             <span className="text-xl font-extrabold tracking-tight bg-gradient-to-r from-red-500 to-red-400 bg-clip-text text-transparent">
               GoSiaga
             </span>
           </Link>
-          <div className="mt-4 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800/50">
+          <section className="mt-4 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800/50">
             <p className="text-xs font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider">
               {user?.role || 'PETUGAS'}
             </p>
-            <p className="text-sm font-semibold truncate">{user?.name || 'Admin BPBD'}</p>
-          </div>
-        </div>
+            <p className="text-sm font-semibold truncate">{user?.name || 'Raihan Ansari (Developer)'}</p>
+          </section>
+        </header>
 
         <nav className="flex-1 p-4 space-y-2">
           {navItems.map((item) => {
@@ -68,7 +67,7 @@ export const DashboardLayout: React.FC = () => {
           })}
         </nav>
 
-        <div className="p-4 border-t border-slate-200 dark:border-slate-700">
+        <footer className="p-4 border-t border-slate-200 dark:border-slate-700">
           <button 
             type="button"
             onClick={handleLogout}
@@ -77,15 +76,12 @@ export const DashboardLayout: React.FC = () => {
             <LogOut className="w-5 h-5" />
             Keluar Sistem
           </button>
-        </div>
+        </footer>
       </aside>
 
-      { }
-      <main className="flex-1 flex flex-col h-screen overflow-hidden">
-        { }
+      <section className="flex-1 flex flex-col h-screen overflow-hidden">
         <header className="h-16 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 flex items-center justify-between px-4 md:px-8 shrink-0 z-[900] relative">
           <div className="flex items-center gap-3">
-            { }
             <button
               type="button"
               onClick={toggleMobileMenu}
@@ -108,20 +104,18 @@ export const DashboardLayout: React.FC = () => {
             >
               {isDarkMode ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5 text-slate-600" />}
             </button>
-            { }
             <NotificationDropdown />
           </div>
         </header>
 
-        {'/* Drawer Menu Navigasi Layar HP */'}
         {isMobileMenuOpen && (
-          <div className="md:hidden fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-sm flex">
-            <div className="w-4/5 max-w-xs bg-white dark:bg-slate-800 h-full shadow-2xl flex flex-col p-5 overflow-y-auto animate-in slide-in-from-left duration-200">
-              <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-700">
+          <aside className="md:hidden fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-sm flex">
+            <nav className="w-4/5 max-w-xs bg-white dark:bg-slate-800 h-full shadow-2xl flex flex-col p-5 overflow-y-auto animate-in slide-in-from-left duration-200">
+              <header className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-700">
                 <Link to="/" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-red-600 flex items-center justify-center shadow-lg shadow-red-600/30">
+                  <figure className="w-8 h-8 rounded-lg bg-red-600 flex items-center justify-center shadow-lg shadow-red-600/30">
                     <ShieldAlert className="w-5 h-5 text-white" />
-                  </div>
+                  </figure>
                   <span className="text-lg font-extrabold tracking-tight bg-gradient-to-r from-red-500 to-red-400 bg-clip-text text-transparent">
                     GoSiaga
                   </span>
@@ -133,18 +127,18 @@ export const DashboardLayout: React.FC = () => {
                 >
                   <X className="w-5 h-5" />
                 </button>
-              </div>
+              </header>
 
-              <div className="my-4 px-3 py-2.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800/50">
+              <section className="my-4 px-3 py-2.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800/50">
                 <p className="text-xs font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider">
                   {user?.role || 'PETUGAS'}
                 </p>
                 <p className="text-sm font-semibold truncate text-slate-800 dark:text-slate-100">
-                  {user?.name || 'Admin BPBD'}
+                  {user?.name || 'Raihan Ansari (Developer)'}
                 </p>
-              </div>
+              </section>
 
-              <nav className="flex-1 space-y-2 py-2">
+              <div className="flex-1 space-y-2 py-2">
                 {navItems.map((item) => {
                   const Icon = item.icon;
                   const isActive = location.pathname === item.path;
@@ -164,9 +158,9 @@ export const DashboardLayout: React.FC = () => {
                     </Link>
                   );
                 })}
-              </nav>
+              </div>
 
-              <div className="pt-4 border-t border-slate-200 dark:border-slate-700 mt-auto">
+              <footer className="pt-4 border-t border-slate-200 dark:border-slate-700 mt-auto">
                 <button 
                   type="button"
                   onClick={handleLogout}
@@ -175,16 +169,16 @@ export const DashboardLayout: React.FC = () => {
                   <LogOut className="w-5 h-5" />
                   Keluar Sistem
                 </button>
-              </div>
-            </div>
+              </footer>
+            </nav>
             <div className="flex-1" onClick={() => setIsMobileMenuOpen(false)} />
-          </div>
+          </aside>
         )}
 
-        <div className="flex-1 overflow-auto p-4 md:p-8">
+        <main className="flex-1 overflow-auto p-4 md:p-8">
           <Outlet />
-        </div>
-      </main>
+        </main>
+      </section>
     </div>
   );
 };

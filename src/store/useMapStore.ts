@@ -228,44 +228,28 @@ const INITIAL_REPORTS: Report[] = [
   }
 ];
 
-import { io } from 'socket.io-client';
+const REPORTS_STORAGE_KEY = 'gosiaga_reports_data';
 
-const socket = io('http://localhost:3001');
+const getInitialReports = (): Report[] => {
+  try {
+    const stored = localStorage.getItem(REPORTS_STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch {}
+  return INITIAL_REPORTS;
+};
+
+const saveReportsToStorage = (reports: Report[]) => {
+  try {
+    localStorage.setItem(REPORTS_STORAGE_KEY, JSON.stringify(reports));
+  } catch {}
+};
 
 export const useMapStore = create<MapStore>((set, get) => {
-  // Listen for socket events
-  socket.on('init_data', (data: Report[]) => {
-    set({ reports: data });
-  });
-
-  socket.on('report_added', (report: Report) => {
-    set((state) => {
-      const isExists = state.reports.find(r => r.id === report.id);
-      if (isExists) return state;
-      return { reports: [report, ...state.reports] };
-    });
-  });
-
-  socket.on('report_updated', (updatedReport: Report) => {
-    set((state) => {
-      const updatedReports = state.reports.map((r) => 
-        r.id === updatedReport.id ? updatedReport : r
-      );
-      
-      const updatedSelectedReport =
-        state.selectedReport?.id === updatedReport.id
-          ? updatedReport
-          : state.selectedReport;
-
-      return {
-        reports: updatedReports,
-        selectedReport: updatedSelectedReport
-      };
-    });
-  });
-
   return {
-    reports: INITIAL_REPORTS,
+    reports: getInitialReports(),
     selectedReport: null,
     isFormOpen: false,
     isDrawerOpen: false,
@@ -309,9 +293,11 @@ export const useMapStore = create<MapStore>((set, get) => {
     setActiveCategory: (cat) => set({ activeCategory: cat }),
 
     addReport: (newReport) => {
-      socket.emit('add_report', newReport);
-      // Optimistic update
-      set((state) => ({ reports: [newReport, ...state.reports] }));
+      set((state) => {
+        const updated = [newReport, ...state.reports];
+        saveReportsToStorage(updated);
+        return { reports: updated };
+      });
     },
 
     addComment: (reportId, text, photoUrl) => {
@@ -325,88 +311,133 @@ export const useMapStore = create<MapStore>((set, get) => {
         likes: 0,
       };
 
-      socket.emit('add_comment', { reportId, comment: newComment });
+      set((state) => {
+        const updatedReports = state.reports.map((r) => {
+          if (r.id === reportId) {
+            const comments = r.comments || [];
+            return {
+              ...r,
+              comments: [newComment, ...comments],
+              commentsCount: (r.commentsCount || 0) + 1,
+            };
+          }
+          return r;
+        });
+
+        const updatedSelected = state.selectedReport?.id === reportId
+          ? updatedReports.find((r) => r.id === reportId) || null
+          : state.selectedReport;
+
+        saveReportsToStorage(updatedReports);
+        return { reports: updatedReports, selectedReport: updatedSelected };
+      });
     },
 
     toggleUpvote: (reportId) => {
-      const report = get().reports.find((r) => r.id === reportId);
-      if (report) {
-        const updated = { 
-          ...report, 
-          upvotes: report.upvotes + 1, 
-          validationsCount: report.validationsCount + 1 
-        };
-        socket.emit('update_report', updated);
-      }
+      set((state) => {
+        const updatedReports = state.reports.map((r) => {
+          if (r.id === reportId) {
+            return {
+              ...r,
+              upvotes: r.upvotes + 1,
+              validationsCount: r.validationsCount + 1,
+            };
+          }
+          return r;
+        });
+
+        const updatedSelected = state.selectedReport?.id === reportId
+          ? updatedReports.find((r) => r.id === reportId) || null
+          : state.selectedReport;
+
+        saveReportsToStorage(updatedReports);
+        return { reports: updatedReports, selectedReport: updatedSelected };
+      });
     },
 
     handleValidation: (reportId: string, type: 'valid' | 'invalid') => {
       const deviceId = getDeviceId();
-      const report = get().reports.find((r) => r.id === reportId);
-      
-      if (report) {
-        let newVotedBy = [...(report.votedBy || [])];
-        let newInvalidatedBy = [...(report.invalidatedBy || [])];
-        let newValidCount = report.validationsCount || 0;
-        let newInvalidCount = report.invalidationsCount || 0;
+      set((state) => {
+        const updatedReports = state.reports.map((report) => {
+          if (report.id !== reportId) return report;
 
-        if (type === 'valid') {
-          if (newVotedBy.includes(deviceId)) {
-            newVotedBy = newVotedBy.filter((id) => id !== deviceId);
-            newValidCount -= 1;
-          } else {
-            newVotedBy.push(deviceId);
-            newValidCount += 1;
-            if (newInvalidatedBy.includes(deviceId)) {
-              newInvalidatedBy = newInvalidatedBy.filter((id) => id !== deviceId);
-              newInvalidCount -= 1;
-            }
-          }
-        } else if (type === 'invalid') {
-          if (newInvalidatedBy.includes(deviceId)) {
-            newInvalidatedBy = newInvalidatedBy.filter((id) => id !== deviceId);
-            newInvalidCount -= 1;
-          } else {
-            newInvalidatedBy.push(deviceId);
-            newInvalidCount += 1;
+          let newVotedBy = [...(report.votedBy || [])];
+          let newInvalidatedBy = [...(report.invalidatedBy || [])];
+          let newValidCount = report.validationsCount || 0;
+          let newInvalidCount = report.invalidationsCount || 0;
+
+          if (type === 'valid') {
             if (newVotedBy.includes(deviceId)) {
               newVotedBy = newVotedBy.filter((id) => id !== deviceId);
               newValidCount -= 1;
+            } else {
+              newVotedBy.push(deviceId);
+              newValidCount += 1;
+              if (newInvalidatedBy.includes(deviceId)) {
+                newInvalidatedBy = newInvalidatedBy.filter((id) => id !== deviceId);
+                newInvalidCount -= 1;
+              }
+            }
+          } else if (type === 'invalid') {
+            if (newInvalidatedBy.includes(deviceId)) {
+              newInvalidatedBy = newInvalidatedBy.filter((id) => id !== deviceId);
+              newInvalidCount -= 1;
+            } else {
+              newInvalidatedBy.push(deviceId);
+              newInvalidCount += 1;
+              if (newVotedBy.includes(deviceId)) {
+                newVotedBy = newVotedBy.filter((id) => id !== deviceId);
+                newValidCount -= 1;
+              }
             }
           }
-        }
 
-        const updated = {
-          ...report,
-          votedBy: newVotedBy,
-          invalidatedBy: newInvalidatedBy,
-          validationsCount: Math.max(0, newValidCount),
-          invalidationsCount: Math.max(0, newInvalidCount),
-        };
-        socket.emit('update_report', updated);
-      }
+          return {
+            ...report,
+            votedBy: newVotedBy,
+            invalidatedBy: newInvalidatedBy,
+            validationsCount: Math.max(0, newValidCount),
+            invalidationsCount: Math.max(0, newInvalidCount),
+          };
+        });
+
+        const updatedSelected = state.selectedReport?.id === reportId
+          ? updatedReports.find((r) => r.id === reportId) || null
+          : state.selectedReport;
+
+        saveReportsToStorage(updatedReports);
+        return { reports: updatedReports, selectedReport: updatedSelected };
+      });
     },
 
     updateReportStatus: (reportId: string, status: ReportStatus) => {
-      const report = get().reports.find((r) => r.id === reportId);
-      if (report) {
-        const updatedTimeline = [
-          ...(report.timeline || []),
-          {
-            id: `t-${Date.now()}`,
-            title: `Status Diperbarui: ${status}`,
-            time: 'Baru saja',
-            status: status,
-            description: 'Status laporan telah diperbarui oleh Tim BPBD.'
-          }
-        ];
-        const updated = {
-          ...report,
-          status,
-          timeline: updatedTimeline
-        };
-        socket.emit('update_report', updated);
-      }
+      set((state) => {
+        const updatedReports = state.reports.map((report) => {
+          if (report.id !== reportId) return report;
+          const updatedTimeline = [
+            ...(report.timeline || []),
+            {
+              id: `t-${Date.now()}`,
+              title: `Status Diperbarui: ${status}`,
+              time: 'Baru saja',
+              status,
+              description: 'Status laporan telah diperbarui oleh Petugas BPBD.'
+            }
+          ];
+          return {
+            ...report,
+            status,
+            timeline: updatedTimeline
+          };
+        });
+
+        const updatedSelected = state.selectedReport?.id === reportId
+          ? updatedReports.find((r) => r.id === reportId) || null
+          : state.selectedReport;
+
+        saveReportsToStorage(updatedReports);
+        return { reports: updatedReports, selectedReport: updatedSelected };
+      });
     },
 
     markNotificationAsRead: (id) => {

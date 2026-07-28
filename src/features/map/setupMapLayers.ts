@@ -4,9 +4,6 @@ import { Report } from '@/store/useMapStore';
 const SOURCE_ID = 'reports-source';
 const LAYER_IDS = ['clusters-glow', 'clusters-core', 'cluster-count', 'unclustered-point'];
 
-/**
- * Build a GeoJSON FeatureCollection from reports array.
- */
 const buildGeoJSON = (reports: Report[]): any => ({
   type: 'FeatureCollection',
   features: reports.map(r => ({
@@ -20,12 +17,8 @@ const buildGeoJSON = (reports: Report[]): any => ({
   }))
 });
 
-/**
- * Add source + layers to the map. Must only be called when style is loaded.
- */
 const addSourceAndLayers = (map: maplibregl.Map, geojson: any, onReportClick?: (r: Report) => void) => {
   if (map.getSource(SOURCE_ID)) {
-    // Source already exists — just update data
     (map.getSource(SOURCE_ID) as maplibregl.GeoJSONSource).setData(geojson);
     return;
   }
@@ -38,7 +31,6 @@ const addSourceAndLayers = (map: maplibregl.Map, geojson: any, onReportClick?: (
     clusterRadius: 50
   });
 
-  // --- Cluster glow (blurred halo) ---
   map.addLayer({
     id: 'clusters-glow',
     type: 'circle',
@@ -52,7 +44,6 @@ const addSourceAndLayers = (map: maplibregl.Map, geojson: any, onReportClick?: (
     }
   });
 
-  // --- Cluster solid core ---
   map.addLayer({
     id: 'clusters-core',
     type: 'circle',
@@ -66,7 +57,6 @@ const addSourceAndLayers = (map: maplibregl.Map, geojson: any, onReportClick?: (
     }
   });
 
-  // --- Cluster count label ---
   map.addLayer({
     id: 'cluster-count',
     type: 'symbol',
@@ -85,7 +75,6 @@ const addSourceAndLayers = (map: maplibregl.Map, geojson: any, onReportClick?: (
     }
   });
 
-  // --- Single (unclustered) point ---
   map.addLayer({
     id: 'unclustered-point',
     type: 'circle',
@@ -107,7 +96,6 @@ const addSourceAndLayers = (map: maplibregl.Map, geojson: any, onReportClick?: (
     }
   });
 
-  // --- Interactivity (only register once per source creation) ---
   map.on('click', 'clusters-core', async (e) => {
     const features = map.queryRenderedFeatures(e.point, { layers: ['clusters-core'] });
     if (!features.length) return;
@@ -116,7 +104,7 @@ const addSourceAndLayers = (map: maplibregl.Map, geojson: any, onReportClick?: (
     try {
       const zoom = await source.getClusterExpansionZoom(clusterId);
       map.easeTo({ center: (features[0].geometry as any).coordinates, zoom });
-    } catch (_) { /* ignore */ }
+    } catch (_) {}
   });
 
   map.on('click', 'unclustered-point', (e) => {
@@ -126,7 +114,7 @@ const addSourceAndLayers = (map: maplibregl.Map, geojson: any, onReportClick?: (
       const report: Report = JSON.parse(features[0].properties.reportData);
       map.flyTo({ center: [report.longitude, report.latitude], zoom: 16, duration: 1000, pitch: 45 });
       onReportClick?.(report);
-    } catch (_) { /* ignore */ }
+    } catch (_) {}
   });
 
   map.on('mouseenter', 'clusters-core',     () => { map.getCanvas().style.cursor = 'pointer'; });
@@ -135,10 +123,6 @@ const addSourceAndLayers = (map: maplibregl.Map, geojson: any, onReportClick?: (
   map.on('mouseleave', 'unclustered-point', () => { map.getCanvas().style.cursor = ''; });
 };
 
-/**
- * Main entry point. Call whenever reports change or after style loads.
- * Safely no-ops if style is not ready yet.
- */
 export const setupMapLayers = (
   map: maplibregl.Map,
   reports: Report[],
@@ -155,10 +139,6 @@ export const setupMapLayers = (
   }
 };
 
-/**
- * Tear down all layers/source (call before changing style to avoid duplicate-layer errors).
- * MapLibre auto-removes layers/sources on setStyle, so this is mainly useful for manual cleanup.
- */
 export const teardownMapLayers = (map: maplibregl.Map) => {
   LAYER_IDS.forEach(id => { try { if (map.getLayer(id)) map.removeLayer(id); } catch (_) {} });
   try { if (map.getSource(SOURCE_ID)) map.removeSource(SOURCE_ID); } catch (_) {}

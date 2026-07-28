@@ -1,33 +1,47 @@
 import { create } from 'zustand';
 
-export type ToastType = 'info' | 'success' | 'warning' | 'error';
-
-export interface ToastMessage {
+export interface NotificationItem {
   id: string;
-  type: ToastType;
   title: string;
   message: string;
-  duration?: number;
+  type: 'info' | 'warning' | 'danger' | 'success';
+  createdAt: string;
+  read: boolean;
 }
 
 interface NotificationState {
-  toasts: ToastMessage[];
-  addToast: (toast: Omit<ToastMessage, 'id'>) => void;
-  removeToast: (id: string) => void;
+  notifications: NotificationItem[];
+  unreadCount: number;
+  addNotification: (item: Omit<NotificationItem, 'id' | 'createdAt' | 'read'>) => void;
+  markAsRead: (id: string) => void;
+  clearAll: () => void;
 }
 
 export const useNotificationStore = create<NotificationState>((set) => ({
-  toasts: [],
-  addToast: (toast) => {
-    const id = crypto.randomUUID();
-    set((state) => ({ toasts: [...state.toasts, { ...toast, id }] }));
+  notifications: [],
+  unreadCount: 0,
 
-    if (toast.duration !== 0) {
-      setTimeout(() => {
-        set((state) => ({ toasts: state.toasts.filter((t) => t.id !== id) }));
-      }, toast.duration || 5000);
-    }
-  },
-  removeToast: (id) =>
-    set((state) => ({ toasts: state.toasts.filter((t) => t.id !== id) })),
+  addNotification: (item) => set((state) => {
+    const newItem: NotificationItem = {
+      ...item,
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+      read: false,
+    };
+    const updated = [newItem, ...state.notifications];
+    return {
+      notifications: updated,
+      unreadCount: updated.filter((n) => !n.read).length,
+    };
+  }),
+
+  markAsRead: (id) => set((state) => {
+    const updated = state.notifications.map((n) => (n.id === id ? { ...n, read: true } : n));
+    return {
+      notifications: updated,
+      unreadCount: updated.filter((n) => !n.read).length,
+    };
+  }),
+
+  clearAll: () => set({ notifications: [], unreadCount: 0 }),
 }));

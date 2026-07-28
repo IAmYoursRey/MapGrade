@@ -47,7 +47,6 @@ export const AnalyticsPage: React.FC = () => {
   const [showOfficerPanel, setShowOfficerPanel] = useState<boolean>(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
-  // Analytics computed
   const analyticsData = useMemo(() => {
     const total = reports.length;
     const unverified  = reports.filter(r => r.status === 'UNVERIFIED').length;
@@ -78,7 +77,6 @@ export const AnalyticsPage: React.FC = () => {
     });
   }, [reports, selectedCategory, selectedStatus]);
 
-  // Fly map to report
   const flyToReport = (report: any) => {
     if (!mapInstance.current) return;
     mapInstance.current.flyTo({
@@ -89,7 +87,6 @@ export const AnalyticsPage: React.FC = () => {
     setIsDrawerOpen(true);
   };
 
-  // Update report status with loading state
   const handleStatusChange = async (reportId: string, status: ReportStatus) => {
     setUpdatingId(reportId);
     updateReportStatus(reportId, status);
@@ -97,7 +94,6 @@ export const AnalyticsPage: React.FC = () => {
     setUpdatingId(null);
   };
 
-  // Map init
   useEffect(() => {
     if (!mapRef.current || mapInstance.current) return;
     const map = new (maplibregl as any).Map({
@@ -118,7 +114,6 @@ export const AnalyticsPage: React.FC = () => {
     return () => { mapInstance.current?.remove(); mapInstance.current = null; };
   }, []);
 
-  // Stable callback ref
   useEffect(() => {
     onReportClickRef.current = (report: any) => {
       if (typeof setSelectedReport === 'function') setSelectedReport(report);
@@ -126,13 +121,11 @@ export const AnalyticsPage: React.FC = () => {
     };
   }, [setSelectedReport, setIsDrawerOpen]);
 
-  // Sync layers
   useEffect(() => {
     if (!mapInstance.current) return;
     setupMapLayers(mapInstance.current, filteredReports, r => onReportClickRef.current(r));
   }, [filteredReports]);
 
-  // Summary stat cards — clicking filters the map
   const statCards = [
     { label: 'Total Insiden', value: analyticsData.total,      color: 'text-white',        bg: 'bg-slate-800/80',   border: 'border-slate-700', status: 'ALL',        icon: <Activity className="w-4 h-4 text-slate-400" /> },
     { label: 'Kritis',        value: analyticsData.critical,   color: 'text-red-400',      bg: 'bg-red-950/40',     border: 'border-red-800',   status: 'UNVERIFIED', icon: <XCircle className="w-4 h-4 text-red-400" /> },
@@ -141,9 +134,7 @@ export const AnalyticsPage: React.FC = () => {
   ];
 
   return (
-    <div className="relative w-full h-[100dvh] overflow-hidden bg-slate-950 text-slate-100 selection:bg-red-500">
-
-      {/* ── Header ── */}
+    <main className="relative w-full h-[100dvh] overflow-hidden bg-slate-950 text-slate-100 selection:bg-red-500">
       <header className="absolute top-2 left-2 right-2 sm:top-4 sm:left-4 sm:right-4 z-[1500] flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5 bg-slate-900/95 backdrop-blur-md p-2.5 sm:p-4 rounded-2xl border border-slate-800 shadow-2xl">
         <div className="flex items-center gap-2.5 min-w-0">
           <button onClick={() => navigate('/')} className="p-2 sm:p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white transition-all active:scale-95 border border-slate-700 shrink-0" title="Kembali ke Peta Utama">
@@ -158,8 +149,7 @@ export const AnalyticsPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 w-full md:w-auto shrink-0 justify-between md:justify-end">
-          {/* Category filters */}
+        <nav className="flex items-center gap-1.5 w-full md:w-auto shrink-0 justify-between md:justify-end">
           <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none flex-1 md:flex-initial">
             {['ALL', 'BANJIR', 'LONGSOR', 'GEMPA', 'KEBAKARAN'].map(cat => (
               <button key={cat} onClick={() => setSelectedCategory(cat)}
@@ -167,12 +157,10 @@ export const AnalyticsPage: React.FC = () => {
                 {cat === 'ALL' ? `Semua (${reports.length})` : cat}
               </button>
             ))}
-            {/* Toggle stats */}
             <button onClick={() => setShowStatsPanel(p => !p)} title="Panel Ringkasan"
               className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl border transition-all shrink-0 ${showStatsPanel ? 'bg-red-600/20 border-red-500 text-red-400' : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'}`}>
               <BarChart2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </button>
-            {/* Toggle officer dashboard */}
             <button onClick={() => setShowOfficerPanel(p => !p)} title="Dashboard Petugas"
               className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl border transition-all shrink-0 ${showOfficerPanel ? 'bg-amber-600/20 border-amber-500 text-amber-400' : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'}`}>
               <Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -181,26 +169,21 @@ export const AnalyticsPage: React.FC = () => {
           <div className="relative z-50 shrink-0 ml-1">
             <NotificationDropdown />
           </div>
-        </div>
+        </nav>
       </header>
 
-      {/* ── Map ── */}
-      <div ref={mapRef} className="relative w-full h-full z-0" />
+      <section ref={mapRef} className="relative w-full h-full z-0" />
 
-      {/* ── Sidebar: Ringkasan (left) ── */}
       {showStatsPanel && (
         <aside className="absolute top-[110px] sm:top-24 left-2 sm:left-4 z-20 w-[calc(100vw-16px)] sm:w-72 md:w-80 max-h-[calc(100dvh-140px)] overflow-y-auto space-y-3 p-3 sm:p-4 bg-slate-900/95 backdrop-blur-md rounded-2xl border border-slate-800 shadow-2xl scrollbar-thin scrollbar-thumb-slate-700">
-          
-          {/* Title */}
-          <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+          <header className="flex items-center justify-between border-b border-slate-800 pb-2">
             <h2 className="text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
               <Activity className="w-3.5 h-3.5 text-red-500" /> Ringkasan
             </h2>
             <span className="text-[9px] sm:text-[10px] bg-red-500/20 text-red-400 font-bold px-1.5 py-0.5 rounded-full border border-red-500/30 animate-pulse">Live</span>
-          </div>
+          </header>
 
-          {/* Stat cards — clicking filters map */}
-          <div className="grid grid-cols-2 gap-2">
+          <section className="grid grid-cols-2 gap-2">
             {statCards.map(card => (
               <button key={card.status}
                 onClick={() => setSelectedStatus(selectedStatus === card.status ? 'ALL' : card.status)}
@@ -214,10 +197,9 @@ export const AnalyticsPage: React.FC = () => {
                 <div className="text-[9px] font-bold text-slate-400 uppercase">{card.label}</div>
               </button>
             ))}
-          </div>
+          </section>
 
-          {/* Casualties + Validations */}
-          <div className="grid grid-cols-2 gap-2">
+          <section className="grid grid-cols-2 gap-2">
             <div className="p-2.5 bg-amber-950/30 rounded-xl border border-amber-800/40 flex items-center gap-2">
               <Users className="w-5 h-5 text-amber-500/60 shrink-0" />
               <div>
@@ -232,10 +214,9 @@ export const AnalyticsPage: React.FC = () => {
                 <div className="text-[9px] font-bold text-slate-400 uppercase">Validasi</div>
               </div>
             </div>
-          </div>
+          </section>
 
-          {/* Category distribution */}
-          <div className="space-y-2 pt-1 border-t border-slate-800">
+          <section className="space-y-2 pt-1 border-t border-slate-800">
             <h3 className="text-[10px] sm:text-xs font-extrabold uppercase text-slate-400">Distribusi Bencana</h3>
             {analyticsData.categoriesList.map(item => (
               <button key={item.name} onClick={() => setSelectedCategory(selectedCategory === item.name ? 'ALL' : item.name)}
@@ -252,10 +233,9 @@ export const AnalyticsPage: React.FC = () => {
               </button>
             ))}
             {analyticsData.categoriesList.length === 0 && <p className="text-[10px] text-slate-500 italic py-2">Belum ada data.</p>}
-          </div>
+          </section>
 
-          {/* Quick report list */}
-          <div className="space-y-1.5 pt-1 border-t border-slate-800">
+          <section className="space-y-1.5 pt-1 border-t border-slate-800">
             <h3 className="text-[10px] sm:text-xs font-extrabold uppercase text-slate-400 flex items-center gap-1.5">
               <MapPin className="w-3 h-3 text-red-400" /> Laporan Terkini
             </h3>
@@ -273,30 +253,28 @@ export const AnalyticsPage: React.FC = () => {
                 </button>
               );
             })}
-          </div>
+          </section>
         </aside>
       )}
 
-      {/* ── Sidebar: Dashboard Petugas (right) ── */}
       {showOfficerPanel && (
         <aside className="absolute top-[110px] sm:top-24 right-2 sm:right-4 z-20 w-[calc(100vw-16px)] sm:w-80 md:w-96 max-h-[calc(100dvh-140px)] overflow-y-auto space-y-3 p-3 sm:p-4 bg-slate-900/95 backdrop-blur-md rounded-2xl border border-amber-900/50 shadow-2xl shadow-amber-900/10 scrollbar-thin scrollbar-thumb-slate-700">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+          <header className="flex items-center justify-between border-b border-slate-800 pb-2">
             <h2 className="text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
               <Shield className="w-3.5 h-3.5" /> Dashboard Petugas BPBD
             </h2>
             <span className="text-[9px] bg-amber-500/20 text-amber-400 font-bold px-2 py-0.5 rounded-full border border-amber-500/30">Akses Terbatas</span>
-          </div>
+          </header>
 
           <p className="text-[10px] text-slate-400 leading-relaxed">Klik tombol status untuk memperbarui penanganan laporan secara real-time ke semua pengguna.</p>
 
-          <div className="space-y-2">
+          <section className="space-y-2">
             {reports.map(r => {
               const s = STATUS_CONFIG[r.status] || STATUS_CONFIG.UNVERIFIED;
               const isUpdating = updatingId === r.id;
               return (
-                <div key={r.id} className={`rounded-xl border p-3 space-y-2.5 transition-all ${s.bg} ${s.border}`}>
-                  {/* Report header */}
-                  <div className="flex items-start gap-2">
+                <article key={r.id} className={`rounded-xl border p-3 space-y-2.5 transition-all ${s.bg} ${s.border}`}>
+                  <header className="flex items-start gap-2">
                     <span className="text-lg shrink-0">{CATEGORY_ICONS[r.category] || '⚠️'}</span>
                     <div className="flex-1 min-w-0">
                       <div className="text-xs font-bold text-slate-100 leading-tight">{r.title}</div>
@@ -308,17 +286,15 @@ export const AnalyticsPage: React.FC = () => {
                       className="p-1 rounded-lg bg-slate-700/60 hover:bg-slate-700 text-slate-300 transition-all shrink-0">
                       <MapPin className="w-3 h-3" />
                     </button>
-                  </div>
+                  </header>
 
-                  {/* Casualties badge */}
                   {(r.casualties || 0) > 0 && (
-                    <div className="flex items-center gap-1 text-[10px] font-bold text-amber-400">
+                    <footer className="flex items-center gap-1 text-[10px] font-bold text-amber-400">
                       <Users className="w-3 h-3" /> {r.casualties} korban terdampak
-                    </div>
+                    </footer>
                   )}
 
-                  {/* Status buttons */}
-                  <div className="grid grid-cols-2 gap-1.5">
+                  <nav className="grid grid-cols-2 gap-1.5">
                     {(['UNVERIFIED', 'NEEDS_REVIEW', 'IN_PROGRESS', 'RESOLVED'] as ReportStatus[]).map(st => {
                       const cfg = STATUS_CONFIG[st];
                       const isActive = r.status === st;
@@ -337,21 +313,20 @@ export const AnalyticsPage: React.FC = () => {
                         </button>
                       );
                     })}
-                  </div>
-                </div>
+                  </nav>
+                </article>
               );
             })}
             {reports.length === 0 && <p className="text-[11px] text-slate-500 italic text-center py-4">Tidak ada laporan aktif.</p>}
-          </div>
+          </section>
         </aside>
       )}
 
-      {/* ── Legend (bottom-right) ── */}
-      <div className="absolute bottom-2 right-2 sm:bottom-6 sm:right-6 z-20 p-2.5 sm:p-3 bg-slate-900/95 backdrop-blur-md rounded-xl sm:rounded-2xl border border-slate-800 shadow-2xl max-w-[180px] sm:max-w-[220px] space-y-1.5">
+      <aside className="absolute bottom-2 right-2 sm:bottom-6 sm:right-6 z-20 p-2.5 sm:p-3 bg-slate-900/95 backdrop-blur-md rounded-xl sm:rounded-2xl border border-slate-800 shadow-2xl max-w-[180px] sm:max-w-[220px] space-y-1.5">
         <h4 className="font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5 text-[9px] sm:text-[10px]">
           <Info className="w-3 h-3 text-red-500 shrink-0" /> Legenda Status
         </h4>
-        <div className="space-y-1 text-[10px] sm:text-[11px] font-semibold">
+        <nav className="space-y-1 text-[10px] sm:text-[11px] font-semibold">
           {(['UNVERIFIED', 'IN_PROGRESS', 'RESOLVED'] as ReportStatus[]).map(st => {
             const cfg = STATUS_CONFIG[st];
             return (
@@ -362,10 +337,10 @@ export const AnalyticsPage: React.FC = () => {
               </button>
             );
           })}
-        </div>
-      </div>
+        </nav>
+      </aside>
 
       <ReportDrawer />
-    </div>
+    </main>
   );
 };

@@ -3,17 +3,26 @@ import { create } from 'zustand';
 interface ThemeState {
   isDarkMode: boolean;
   toggleTheme: () => void;
+  setTheme: (isDark: boolean) => void;
 }
 
+const getInitialTheme = (): boolean => {
+  if (typeof window === 'undefined') return true;
+  const stored = localStorage.getItem('gosiaga_theme');
+  return stored ? stored === 'dark' : true;
+};
+
 export const useThemeStore = create<ThemeState>((set) => ({
-  isDarkMode: true, // Default to dark mode as per existing MainLayout
+  isDarkMode: getInitialTheme(),
+
   toggleTheme: () => set((state) => {
-    const newMode = !state.isDarkMode;
-    if (newMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-    return { isDarkMode: newMode };
+    const next = !state.isDarkMode;
+    localStorage.setItem('gosiaga_theme', next ? 'dark' : 'light');
+    return { isDarkMode: next };
   }),
+
+  setTheme: (isDark: boolean) => {
+    localStorage.setItem('gosiaga_theme', isDark ? 'dark' : 'light');
+    set({ isDarkMode: isDark });
+  },
 }));

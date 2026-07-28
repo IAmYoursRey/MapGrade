@@ -21,8 +21,8 @@ export const router = createBrowserRouter([
       <div className="flex min-h-screen flex-col items-center justify-center bg-slate-900 text-white p-6 text-center">
         <h1 className="text-2xl font-bold text-red-500">Terjadi Kesalahan Aplikasi</h1>
         <p className="mt-2 text-slate-400 text-sm">Terjadi kesalahan tak terduga. Silakan muat ulang halaman.</p>
-        <button 
-          onClick={() => window.location.reload()} 
+        <button
+          onClick={() => window.location.reload()}
           className="mt-4 rounded-xl bg-red-600 px-5 py-2.5 text-xs font-bold text-white shadow-lg hover:bg-red-700 transition-all"
         >
           Muat Ulang Halaman
@@ -51,8 +51,8 @@ export const router = createBrowserRouter([
     path: '/analytics/heatmap',
     element: <AnalyticsPage />,
   },
-  { 
-    path: '*', 
-    element: <Navigate to="/" replace /> 
+  {
+    path: '*',
+    element: <Navigate to="/" replace />,
   },
 ]);

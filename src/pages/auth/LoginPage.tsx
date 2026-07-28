@@ -16,36 +16,36 @@ export const LoginPage: React.FC = () => {
     e.preventDefault();
     clearError();
     
-    await login(email, role);
-    if (!error) {
-      const targetRoute = role === 'BPBD' ? '/dashboard/bpbd' : '/map';
+    const success = await login(email, password, role);
+    if (success) {
+      const userRole = useAuthStore.getState().user?.role;
+      const targetRoute = (userRole === 'BPBD' || userRole === 'ADMIN') ? '/dashboard/bpbd' : '/map';
       navigate(targetRoute);
     }
   };
 
   return (
-    <div className="min-h-[90vh] flex items-center justify-center p-4 relative overflow-hidden">
-      { }
-      <div className="absolute top-0 right-0 w-96 h-96 bg-red-600/10 blur-[100px] rounded-full pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-96 h-96 bg-blue-600/10 blur-[100px] rounded-full pointer-events-none" />
+    <main className="min-h-[90vh] flex items-center justify-center p-4 relative overflow-hidden">
+      <section className="absolute top-0 right-0 w-96 h-96 bg-red-600/10 blur-[100px] rounded-full pointer-events-none" />
+      <section className="absolute bottom-0 left-0 w-96 h-96 bg-blue-600/10 blur-[100px] rounded-full pointer-events-none" />
 
-      <div className="w-full max-w-md bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl border border-slate-200 dark:border-slate-700 rounded-3xl shadow-2xl p-8 relative z-10">
-        <div className="flex flex-col items-center mb-8 text-center">
-          <div className="w-12 h-12 bg-red-600 rounded-xl flex items-center justify-center shadow-lg shadow-red-600/30 mb-4">
+      <article className="w-full max-w-md bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl border border-slate-200 dark:border-slate-700 rounded-3xl shadow-2xl p-8 relative z-10">
+        <header className="flex flex-col items-center mb-8 text-center">
+          <figure className="w-12 h-12 bg-red-600 rounded-xl flex items-center justify-center shadow-lg shadow-red-600/30 mb-4">
             <ShieldAlert className="w-7 h-7 text-white" />
-          </div>
+          </figure>
           <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Selamat Datang Kembali</h2>
           <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Masuk untuk melanjutkan pelaporan dan verifikasi data bencana.</p>
-        </div>
+        </header>
 
         {error && (
-          <div className="mb-6 p-3 bg-red-100/50 border border-red-500/50 text-red-600 rounded-lg text-sm text-center">
+          <aside className="mb-6 p-3 bg-red-100/50 border border-red-500/50 text-red-600 rounded-lg text-sm text-center">
             {error}
-          </div>
+          </aside>
         )}
 
         <form onSubmit={handleLogin} className="space-y-5">
-          <div className="space-y-1">
+          <fieldset className="space-y-1">
             <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Email Address</label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -58,9 +58,9 @@ export const LoginPage: React.FC = () => {
                 placeholder="nama@email.com"
               />
             </div>
-          </div>
+          </fieldset>
 
-          <div className="space-y-1">
+          <fieldset className="space-y-1">
             <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Password</label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -73,9 +73,9 @@ export const LoginPage: React.FC = () => {
                 placeholder="••••••••"
               />
             </div>
-          </div>
+          </fieldset>
 
-          <div className="space-y-1">
+          <fieldset className="space-y-1">
             <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Masuk Sebagai</label>
             <select 
               value={role}
@@ -86,7 +86,7 @@ export const LoginPage: React.FC = () => {
               <option value="BPBD">Petugas Command Center BPBD</option>
               <option value="ADMIN">Administrator Sistem</option>
             </select>
-          </div>
+          </fieldset>
 
           <button 
             type="submit" 
@@ -97,13 +97,13 @@ export const LoginPage: React.FC = () => {
           </button>
         </form>
 
-        <p className="mt-8 text-center text-sm text-slate-500 dark:text-slate-400">
+        <footer className="mt-8 text-center text-sm text-slate-500 dark:text-slate-400">
           Belum memiliki akun?{' '}
           <Link to="/auth/register" className="font-bold text-red-600 hover:text-red-500 transition-colors">
             Daftar Sekarang
           </Link>
-        </p>
-      </div>
-    </div>
+        </footer>
+      </article>
+    </main>
   );
 };
