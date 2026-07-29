@@ -69,6 +69,11 @@ export const setupMapLayers = (
   const geojson = buildGeoJSON(reports);
 
   const applyLayers = () => {
+    if (!map.isStyleLoaded()) {
+      map.once('style.load', applyLayers);
+      return;
+    }
+
     try {
       if (map.getSource(SOURCE_ID)) {
         (map.getSource(SOURCE_ID) as maplibregl.GeoJSONSource).setData(geojson);
@@ -76,7 +81,9 @@ export const setupMapLayers = (
         map.addSource(SOURCE_ID, {
           type: 'geojson',
           data: geojson,
-          cluster: false
+          cluster: !isHeatmapMode,
+          clusterMaxZoom: 12,
+          clusterRadius: 50
         });
       }
 
@@ -132,11 +139,62 @@ export const setupMapLayers = (
           map.removeLayer('gosiaga-heatmap-layer');
         }
 
+        if (!map.getLayer('clusters-glow')) {
+          map.addLayer({
+            id: 'clusters-glow',
+            type: 'circle',
+            source: SOURCE_ID,
+            filter: ['has', 'point_count'],
+            paint: {
+              'circle-color': '#ef4444',
+              'circle-radius': ['step', ['get', 'point_count'], 20, 5, 26, 15, 34],
+              'circle-opacity': 0.35,
+              'circle-blur': 0.8
+            }
+          });
+        }
+
+        if (!map.getLayer('clusters-core')) {
+          map.addLayer({
+            id: 'clusters-core',
+            type: 'circle',
+            source: SOURCE_ID,
+            filter: ['has', 'point_count'],
+            paint: {
+              'circle-color': '#ef4444',
+              'circle-radius': ['step', ['get', 'point_count'], 14, 5, 18, 15, 24],
+              'circle-stroke-width': 2.5,
+              'circle-stroke-color': '#ffffff'
+            }
+          });
+        }
+
+        if (!map.getLayer('cluster-count')) {
+          map.addLayer({
+            id: 'cluster-count',
+            type: 'symbol',
+            source: SOURCE_ID,
+            filter: ['has', 'point_count'],
+            layout: {
+              'text-field': '{point_count_abbreviated}',
+              'text-size': 12,
+              'text-allow-overlap': true,
+              'text-ignore-placement': true
+            },
+            paint: {
+              'text-color': '#ffffff',
+              'text-halo-color': 'rgba(0,0,0,0.6)',
+              'text-halo-width': 1.5
+            }
+          });
+        }
+
         if (!map.getLayer('unclustered-glow')) {
           map.addLayer({
             id: 'unclustered-glow',
             type: 'circle',
             source: SOURCE_ID,
+            filter: ['!', ['has', 'point_count']],
             paint: {
               'circle-color': [
                 'match',
@@ -147,8 +205,8 @@ export const setupMapLayers = (
                 'RESOLVED',     '#10b981',
                 '#ef4444'
               ],
-              'circle-radius': ['interpolate', ['linear'], ['zoom'], 0, 10, 8, 14, 16, 20],
-              'circle-opacity': 0.4,
+              'circle-radius': ['interpolate', ['linear'], ['zoom'], 0, 7, 8, 12, 16, 18],
+              'circle-opacity': 0.35,
               'circle-blur': 0.6
             }
           });
@@ -159,6 +217,7 @@ export const setupMapLayers = (
             id: 'unclustered-point',
             type: 'circle',
             source: SOURCE_ID,
+            filter: ['!', ['has', 'point_count']],
             paint: {
               'circle-color': [
                 'match',
@@ -169,8 +228,8 @@ export const setupMapLayers = (
                 'RESOLVED',     '#10b981',
                 '#ef4444'
               ],
-              'circle-radius': ['interpolate', ['linear'], ['zoom'], 0, 7, 8, 10, 16, 14],
-              'circle-stroke-width': 2.5,
+              'circle-radius': ['interpolate', ['linear'], ['zoom'], 0, 5, 8, 8, 16, 12],
+              'circle-stroke-width': 2,
               'circle-stroke-color': '#ffffff'
             }
           });
@@ -181,10 +240,12 @@ export const setupMapLayers = (
             id: 'unclustered-label',
             type: 'symbol',
             source: SOURCE_ID,
+            filter: ['!', ['has', 'point_count']],
+            minzoom: 3,
             layout: {
               'text-field': ['concat', ['get', 'icon'], ' ', ['get', 'title']],
-              'text-size': 12,
-              'text-offset': [0, 1.4],
+              'text-size': 11,
+              'text-offset': [0, 1.3],
               'text-anchor': 'top',
               'text-allow-overlap': true,
               'text-ignore-placement': true
@@ -192,69 +253,35 @@ export const setupMapLayers = (
             paint: {
               'text-color': '#ffffff',
               'text-halo-color': 'rgba(15, 23, 42, 0.95)',
-              'text-halo-width': 2.5
+              'text-halo-width': 2
             }
           });
         }
       }
     } catch (err) {
-      console.error('applyLayers failed:', err);
+      console.error('applyLayers error:', err);
     }
   };
 
   applyLayers();
 
   if (!isHeatmapMode) {
-    let existingDomMarkers: maplibregl.Marker[] = (map as any).__gosiagaDomMarkers || [];
-    existingDomMarkers.forEach((m) => m.remove());
-    existingDomMarkers = [];
-
-    (reports || []).forEach((r) => {
-      const lng = Number(r.longitude);
-      const lat = Number(r.latitude);
-      const validLng = !isNaN(lng) && lng !== 0 ? lng : 112.7521;
-      const validLat = !isNaN(lat) && lat !== 0 ? lat : -7.2575;
-
-      const catKey = normalizeCategoryKey(r.category);
-
-      const el = document.createElement('div');
-      el.className = 'gosiaga-html-marker';
-      el.style.width = '34px';
-      el.style.height = '34px';
-      el.style.borderRadius = '50%';
-      el.style.backgroundColor = r.status === 'RESOLVED' ? '#10b981' : r.status === 'IN_PROGRESS' ? '#3b82f6' : r.status === 'NEEDS_REVIEW' ? '#f59e0b' : '#ef4444';
-      el.style.border = '3px solid #ffffff';
-      el.style.boxShadow = '0 4px 12px rgba(0,0,0,0.6)';
-      el.style.display = 'flex';
-      el.style.alignItems = 'center';
-      el.style.justifyContent = 'center';
-      el.style.fontSize = '16px';
-      el.style.cursor = 'pointer';
-      el.style.transition = 'transform 0.2s ease, box-shadow 0.2s ease';
-      el.title = `${r.title} (${r.category})`;
-      el.innerHTML = CATEGORY_ICONS[catKey] || '⚠️';
-
-      el.onmouseenter = () => { el.style.transform = 'scale(1.25)'; };
-      el.onmouseleave = () => { el.style.transform = 'scale(1)'; };
-
-      el.onclick = (e) => {
-        e.stopPropagation();
-        map.flyTo({ center: [validLng, validLat], zoom: 15, duration: 800 });
-        onReportClick?.(r);
-      };
-
-      const marker = new maplibregl.Marker({ element: el })
-        .setLngLat([validLng, validLat])
-        .addTo(map);
-
-      existingDomMarkers.push(marker);
+    try {
+      map.off('click', 'clusters-core', () => {});
+    } catch (_) {}
+    map.on('click', 'clusters-core', async (e) => {
+      const features = map.queryRenderedFeatures(e.point, { layers: ['clusters-core'] });
+      if (!features.length) return;
+      const clusterId = features[0].properties.cluster_id as number;
+      const source = map.getSource(SOURCE_ID) as maplibregl.GeoJSONSource;
+      try {
+        const zoom = await source.getClusterExpansionZoom(clusterId);
+        map.easeTo({ center: (features[0].geometry as any).coordinates, zoom });
+      } catch (_) {}
     });
 
-    (map as any).__gosiagaDomMarkers = existingDomMarkers;
-  } else {
-    let existingDomMarkers: maplibregl.Marker[] = (map as any).__gosiagaDomMarkers || [];
-    existingDomMarkers.forEach((m) => m.remove());
-    (map as any).__gosiagaDomMarkers = [];
+    map.on('mouseenter', 'clusters-core', () => { map.getCanvas().style.cursor = 'pointer'; });
+    map.on('mouseleave', 'clusters-core', () => { map.getCanvas().style.cursor = ''; });
   }
 
   const handlePointClick = (e: maplibregl.MapMouseEvent & { features?: maplibregl.MapGeoJSONFeature[] }) => {
@@ -286,10 +313,6 @@ export const setupMapLayers = (
 };
 
 export const teardownMapLayers = (map: maplibregl.Map) => {
-  let existingDomMarkers: maplibregl.Marker[] = (map as any).__gosiagaDomMarkers || [];
-  existingDomMarkers.forEach((m) => m.remove());
-  (map as any).__gosiagaDomMarkers = [];
-
   LAYER_IDS.forEach((id) => {
     try {
       if (map.getLayer(id)) map.removeLayer(id);
