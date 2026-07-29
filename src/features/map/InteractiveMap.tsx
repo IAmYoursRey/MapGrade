@@ -188,11 +188,12 @@ export const InteractiveMap: React.FC = () => {
 
     mapInstance.current.setStyle(targetStyle);
 
-    renderLayers();
-
-    mapInstance.current.once('style.load', renderLayers);
-    mapInstance.current.once('styledata', renderLayers);
-    mapInstance.current.once('idle', renderLayers);
+    if (mapInstance.current.isStyleLoaded()) {
+      renderLayers();
+    } else {
+      mapInstance.current.once('style.load', renderLayers);
+      mapInstance.current.once('styledata', renderLayers);
+    }
   }, [activeLayer, reports]);
 
   const toggle3DMode = () => {
