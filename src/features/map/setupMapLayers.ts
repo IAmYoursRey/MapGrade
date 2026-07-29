@@ -2,11 +2,6 @@ import * as maplibregl from 'maplibre-gl';
 import { Report } from '@/store/useMapStore';
 
 const SOURCE_ID = 'gosiaga-reports-source';
-const LAYER_IDS = [
-  'gosiaga-heatmap-layer',
-  'unclustered-glow',
-  'unclustered-point',
-];
 
 const buildGeoJSON = (reports: Report[]): GeoJSON.FeatureCollection => ({
   type: 'FeatureCollection',
@@ -33,38 +28,16 @@ const buildGeoJSON = (reports: Report[]): GeoJSON.FeatureCollection => ({
   })
 });
 
-const waitForStyleLoaded = (map: maplibregl.Map): Promise<void> => {
-  return new Promise((resolve) => {
-    if (map.isStyleLoaded()) {
-      resolve();
-      return;
-    }
-    const check = () => {
-      if (map.isStyleLoaded()) {
-        resolve();
-      } else {
-        setTimeout(check, 100);
-      }
-    };
-    map.once('load', check);
-    setTimeout(check, 200);
-  });
-};
-
-export const setupMapLayers = async (
-  map: maplibregl.Map,
-  reports: Report[],
-  onReportClick?: (report: Report) => void,
-  isHeatmapMode = false
-) => {
-  const geojson = buildGeoJSON(reports);
-
-  await waitForStyleLoaded(map);
-
-  LAYER_IDS.forEach((id) => {
+const removeLayers = (map: maplibregl.Map) => {
+  const ids = ['gosiaga-heatmap-layer', 'unclustered-glow', 'unclustered-point'];
+  ids.forEach((id) => {
     try { if (map.getLayer(id)) map.removeLayer(id); } catch (_) {}
   });
   try { if (map.getSource(SOURCE_ID)) map.removeSource(SOURCE_ID); } catch (_) {}
+};
+
+const addLayers = (map: maplibregl.Map, geojson: GeoJSON.FeatureCollection, isHeatmapMode: boolean) => {
+  removeLayers(map);
 
   map.addSource(SOURCE_ID, {
     type: 'geojson',
@@ -80,10 +53,7 @@ export const setupMapLayers = async (
       maxzoom: 16,
       paint: {
         'heatmap-weight': 1,
-        'heatmap-intensity': [
-          'interpolate', ['linear'], ['zoom'],
-          0, 1, 6, 2, 12, 3
-        ],
+        'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 0, 1, 6, 2, 12, 3],
         'heatmap-color': [
           'interpolate', ['linear'], ['heatmap-density'],
           0, 'rgba(0,0,0,0)',
@@ -92,10 +62,7 @@ export const setupMapLayers = async (
           0.7, 'rgba(239,68,68,0.95)',
           1.0, 'rgba(255,255,255,1)'
         ],
-        'heatmap-radius': [
-          'interpolate', ['exponential', 1.4], ['zoom'],
-          0, 10, 4, 20, 7, 35, 10, 50, 14, 75
-        ],
+        'heatmap-radius': ['interpolate', ['exponential', 1.4], ['zoom'], 0, 10, 4, 20, 7, 35, 10, 50, 14, 75],
         'heatmap-opacity': 0.9
       }
     });
@@ -150,10 +117,40 @@ export const setupMapLayers = async (
       }
     });
   }
+};
+
+export const setupMapLayers = (
+  map: maplibregl.Map,
+  reports: Report[],
+  onReportClick?: (report: Report) => void,
+  isHeatmapMode = false
+) => {
+  const geojson = buildGeoJSON(reports);
+
+  const doAdd = () => {
+    try {
+      addLayers(map, geojson, isHeatmapMode);
+    } catch (err) {
+      console.warn('[setupMapLayers] addLayers failed, will retry on style.load:', err);
+    }
+  };
+
+  if (map.isStyleLoaded()) {
+    doAdd();
+  }
+
+  map.once('style.load', () => {
+    try {
+      addLayers(map, geojson, isHeatmapMode);
+    } catch (_) {}
+  });
 
   const handlePointClick = (e: maplibregl.MapMouseEvent & { features?: maplibregl.MapGeoJSONFeature[] }) => {
-    const layersToQuery = ['unclustered-point'];
-    if (map.getLayer('unclustered-glow')) layersToQuery.push('unclustered-glow');
+    const layersToQuery: string[] = [];
+    try { if (map.getLayer('unclustered-point')) layersToQuery.push('unclustered-point'); } catch (_) {}
+    try { if (map.getLayer('unclustered-glow')) layersToQuery.push('unclustered-glow'); } catch (_) {}
+    if (!layersToQuery.length) return;
+
     const features = map.queryRenderedFeatures(e.point, { layers: layersToQuery });
     if (!features.length) return;
     try {
@@ -165,14 +162,22 @@ export const setupMapLayers = async (
     } catch (_) {}
   };
 
-  map.on('click', 'unclustered-point', handlePointClick);
-  map.on('mouseenter', 'unclustered-point', () => { map.getCanvas().style.cursor = 'pointer'; });
-  map.on('mouseleave', 'unclustered-point', () => { map.getCanvas().style.cursor = ''; });
+  map.on('click', handlePointClick);
+  map.on('mouseenter', 'unclustered-point', () => { try { map.getCanvas().style.cursor = 'pointer'; } catch (_) {} });
+  map.on('mouseleave', 'unclustered-point', () => { try { map.getCanvas().style.cursor = ''; } catch (_) {} });
+};
+
+export const updateMapData = (map: maplibregl.Map, reports: Report[]) => {
+  const geojson = buildGeoJSON(reports);
+  try {
+    const source = map.getSource(SOURCE_ID) as maplibregl.GeoJSONSource;
+    if (source) {
+      source.setData(geojson);
+      return;
+    }
+  } catch (_) {}
 };
 
 export const teardownMapLayers = (map: maplibregl.Map) => {
-  LAYER_IDS.forEach((id) => {
-    try { if (map.getLayer(id)) map.removeLayer(id); } catch (_) {}
-  });
-  try { if (map.getSource(SOURCE_ID)) map.removeSource(SOURCE_ID); } catch (_) {}
+  removeLayers(map);
 };

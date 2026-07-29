@@ -1,11 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as maplibregl from 'maplibre-gl';
-import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { useMapStore, MapLayerType } from '@/store/useMapStore';
-import { useAuthStore, isDevUser as checkIsDevUser, hasMapMarkPermission } from '@/store/useAuthStore';
+import { useAuthStore, hasMapMarkPermission } from '@/store/useAuthStore';
 import { Layers, X, MapPin, Globe } from 'lucide-react';
-import { setupMapLayers } from './setupMapLayers';
+import { setupMapLayers, updateMapData } from './setupMapLayers';
 
 const MAP_STYLES: Record<string, { style: any; label: string }> = {
   dark: {
@@ -74,114 +73,100 @@ const MAP_STYLES: Record<string, { style: any; label: string }> = {
 export const InteractiveMap: React.FC = () => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<maplibregl.Map | null>(null);
-  const prevLayerRef = useRef<string | null>(null);
-  const layerSetupId = useRef(0);
+  const layersInitialized = useRef(false);
 
   const { user } = useAuthStore();
   const canMarkMap = hasMapMarkPermission(user);
 
-  const store = useMapStore();
-  const reports = store.reports || [];
-  const activeLayer = store.activeLayer || 'dark';
-  const setSelectedReport = store.setSelectedReport || store.setSelectedReportId;
-  const setIsDrawerOpen = store.setIsDrawerOpen;
-  const setIsFormOpen = store.setIsFormOpen;
-  const setManualCoords = store.setManualCoords;
-  const setActiveLayer = store.setActiveLayer;
+  const reports = useMapStore((s) => s.reports) || [];
+  const activeLayer = useMapStore((s) => s.activeLayer) || 'dark';
+  const setSelectedReport = useMapStore((s) => s.setSelectedReport);
+  const setIsDrawerOpen = useMapStore((s) => s.setIsDrawerOpen);
+  const setIsFormOpen = useMapStore((s) => s.setIsFormOpen);
+  const setManualCoords = useMapStore((s) => s.setManualCoords);
+  const setActiveLayer = useMapStore((s) => s.setActiveLayer);
 
   const [showLayerSelector, setShowLayerSelector] = useState(false);
   const [is3DMode, setIs3DMode] = useState(false);
 
-  const onReportClickRef = useRef((report: any) => {
-    if (typeof setSelectedReport === 'function') setSelectedReport(report);
-    if (typeof setIsDrawerOpen === 'function') setIsDrawerOpen(true);
-  });
-
-  useEffect(() => {
-    onReportClickRef.current = (report: any) => {
-      if (typeof setSelectedReport === 'function') setSelectedReport(report);
-      if (typeof setIsDrawerOpen === 'function') setIsDrawerOpen(true);
-    };
-  }, [setSelectedReport, setIsDrawerOpen]);
-
-  const applyMarkers = async (map: maplibregl.Map) => {
-    const id = ++layerSetupId.current;
-    const currentReports = useMapStore.getState().reports || [];
-    await setupMapLayers(map, currentReports, (r) => onReportClickRef.current(r), false);
-    if (layerSetupId.current !== id) return;
+  const onReportClick = (report: any) => {
+    setSelectedReport(report);
+    setIsDrawerOpen(true);
   };
 
   useEffect(() => {
     if (!mapRef.current || mapInstance.current) return;
 
     const initialStyle = MAP_STYLES[activeLayer]?.style || MAP_STYLES.dark.style;
-    prevLayerRef.current = activeLayer;
 
-    const map = new (maplibregl as any).Map({
+    const map = new maplibregl.Map({
       container: mapRef.current,
       style: initialStyle,
       center: [118.0, -2.5],
       zoom: 4.8,
       pitch: 0,
-      projection: { type: 'mercator' },
       antialias: true,
       maxZoom: 19,
-      attributionControl: false,
-      workerUrl: maplibreWorkerUrl
-    }) as maplibregl.Map;
+      attributionControl: false
+    });
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: true, showZoom: true, visualizePitch: true }), 'bottom-right');
     map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
 
     mapInstance.current = map;
 
-    applyMarkers(map);
+    const currentReports = useMapStore.getState().reports || [];
+    setupMapLayers(map, currentReports, onReportClick, false);
+    layersInitialized.current = true;
 
     map.on('click', (e) => {
       const currentUser = useAuthStore.getState().user;
-      const authorized = hasMapMarkPermission(currentUser);
-      if (authorized) {
-        setManualCoords({ lat: e.lngLat.lat, lng: e.lngLat.lng });
-        setIsFormOpen(true);
-      }
+      if (!hasMapMarkPermission(currentUser)) return;
+
+      try {
+        const layers: string[] = [];
+        if (map.getLayer('unclustered-point')) layers.push('unclustered-point');
+        if (map.getLayer('unclustered-glow')) layers.push('unclustered-glow');
+        if (layers.length > 0) {
+          const features = map.queryRenderedFeatures(e.point, { layers });
+          if (features.length > 0) return;
+        }
+      } catch (_) {}
+
+      setManualCoords({ lat: e.lngLat.lat, lng: e.lngLat.lng });
+      setIsFormOpen(true);
     });
 
     const resizeObserver = new ResizeObserver(() => {
       mapInstance.current?.resize();
     });
     if (mapRef.current) resizeObserver.observe(mapRef.current);
-
     setTimeout(() => { try { map.resize(); } catch (_) {} }, 150);
 
     return () => {
       resizeObserver.disconnect();
       mapInstance.current?.remove();
       mapInstance.current = null;
+      layersInitialized.current = false;
     };
   }, []);
 
   useEffect(() => {
-    if (!mapInstance.current) return;
-    if (prevLayerRef.current === activeLayer) return;
-    prevLayerRef.current = activeLayer;
+    const map = mapInstance.current;
+    if (!map) return;
 
     const targetStyle = MAP_STYLES[activeLayer]?.style || MAP_STYLES.dark.style;
-    mapInstance.current.setStyle(targetStyle);
+    map.setStyle(targetStyle);
 
-    const map = mapInstance.current;
-    const doSetup = async () => {
-      await setupMapLayers(map, reports, (r) => onReportClickRef.current(r), false);
-    };
-    doSetup();
+    const currentReports = useMapStore.getState().reports || [];
+    setupMapLayers(map, currentReports, onReportClick, false);
   }, [activeLayer]);
 
   useEffect(() => {
-    if (!mapInstance.current) return;
     const map = mapInstance.current;
-    const doSetup = async () => {
-      await setupMapLayers(map, reports, (r) => onReportClickRef.current(r), false);
-    };
-    doSetup();
+    if (!map || !layersInitialized.current) return;
+
+    updateMapData(map, reports);
   }, [reports]);
 
   const toggle3DMode = () => {
@@ -190,10 +175,10 @@ export const InteractiveMap: React.FC = () => {
     setIs3DMode(nextState);
     try {
       if (nextState) {
-        (mapInstance.current as any).setProjection({ type: 'globe' });
+        (mapInstance.current as any).setProjection?.({ type: 'globe' });
         mapInstance.current.easeTo({ pitch: 45, duration: 600 });
       } else {
-        (mapInstance.current as any).setProjection({ type: 'mercator' });
+        (mapInstance.current as any).setProjection?.({ type: 'mercator' });
         mapInstance.current.easeTo({ pitch: 0, duration: 600 });
       }
     } catch (_) {}
@@ -220,7 +205,7 @@ export const InteractiveMap: React.FC = () => {
               ? 'bg-blue-600 border-blue-500 text-white shadow-blue-600/30'
               : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-white border-slate-200 dark:border-slate-700 hover:bg-slate-50'
           }`}
-          title="Alihkan Tampilan 2D (Ringan) / 3D"
+          title="Alihkan Tampilan 2D / 3D"
         >
           <Globe className={`w-4 h-4 sm:w-5 sm:h-5 ${is3DMode ? 'animate-spin' : 'text-blue-500'}`} />
           <span className="hidden sm:inline">{is3DMode ? 'Mode 3D (Aktif)' : 'Mode 2D (Ringan)'}</span>
@@ -246,7 +231,7 @@ export const InteractiveMap: React.FC = () => {
               <button
                 key={id}
                 onClick={() => {
-                  if (typeof setActiveLayer === 'function') setActiveLayer(id as MapLayerType);
+                  setActiveLayer(id as MapLayerType);
                   setShowLayerSelector(false);
                 }}
                 className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold transition-all ${

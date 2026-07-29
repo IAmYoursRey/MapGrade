@@ -1,11 +1,10 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as maplibregl from 'maplibre-gl';
-import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { useMapStore, ReportStatus } from '@/store/useMapStore';
 import { NotificationDropdown } from '@/components/common/NotificationDropdown';
-import { setupMapLayers } from '@/features/map/setupMapLayers';
+import { setupMapLayers, updateMapData } from '@/features/map/setupMapLayers';
 import { ReportDrawer } from '@/features/report/ReportDrawer';
 import {
   Info, ArrowLeft, Activity, Users, BarChart2, Flame,
@@ -49,7 +48,7 @@ const CATEGORY_ICONS: Record<string, string> = {
 export const AnalyticsPage: React.FC = () => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<maplibregl.Map | null>(null);
-  const onReportClickRef = useRef<(r: any) => void>(() => {});
+  const layersInitialized = useRef(false);
 
   const navigate = useNavigate();
   const { reports = [], setSelectedReport, setIsDrawerOpen, updateReportStatus } = useMapStore();
@@ -91,6 +90,11 @@ export const AnalyticsPage: React.FC = () => {
     });
   }, [reports, selectedCategory, selectedStatus]);
 
+  const onReportClick = (report: any) => {
+    setSelectedReport(report);
+    setIsDrawerOpen(true);
+  };
+
   const flyToReport = (report: any) => {
     if (!mapInstance.current) return;
     mapInstance.current.flyTo({
@@ -101,36 +105,34 @@ export const AnalyticsPage: React.FC = () => {
     setIsDrawerOpen(true);
   };
 
-  const handleStatusChange = async (reportId: string, status: ReportStatus) => {
+  const handleStatusChange = (reportId: string, status: ReportStatus) => {
     setUpdatingId(reportId);
     updateReportStatus(reportId, status);
-    await new Promise(r => setTimeout(r, 600));
-    setUpdatingId(null);
+    setTimeout(() => setUpdatingId(null), 600);
   };
 
   useEffect(() => {
     if (!mapRef.current || mapInstance.current) return;
-    const map = new (maplibregl as any).Map({
+
+    const map = new maplibregl.Map({
       container: mapRef.current,
       style: DARK_MAP_STYLE,
       center: [113.9213, -0.7893],
       zoom: 4,
       pitch: 0,
-      projection: { type: 'mercator' },
-      antialias: true, maxZoom: 19, attributionControl: false,
-      workerUrl: maplibreWorkerUrl
-    }) as maplibregl.Map;
+      antialias: true,
+      maxZoom: 19,
+      attributionControl: false
+    });
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: true, showZoom: true, visualizePitch: true }), 'top-right');
     map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
 
     mapInstance.current = map;
 
-    const doSetup = async () => {
-      const currentReports = useMapStore.getState().reports || [];
-      await setupMapLayers(map, currentReports, r => onReportClickRef.current(r), true);
-    };
-    doSetup();
+    const currentReports = useMapStore.getState().reports || [];
+    setupMapLayers(map, currentReports, onReportClick, true);
+    layersInitialized.current = true;
 
     const resizeObserver = new ResizeObserver(() => {
       mapInstance.current?.resize();
@@ -141,23 +143,14 @@ export const AnalyticsPage: React.FC = () => {
       resizeObserver.disconnect();
       mapInstance.current?.remove();
       mapInstance.current = null;
+      layersInitialized.current = false;
     };
   }, []);
 
   useEffect(() => {
-    onReportClickRef.current = (report: any) => {
-      if (typeof setSelectedReport === 'function') setSelectedReport(report);
-      if (typeof setIsDrawerOpen   === 'function') setIsDrawerOpen(true);
-    };
-  }, [setSelectedReport, setIsDrawerOpen]);
-
-  useEffect(() => {
-    if (!mapInstance.current) return;
     const map = mapInstance.current;
-    const doSetup = async () => {
-      await setupMapLayers(map, filteredReports, r => onReportClickRef.current(r), true);
-    };
-    doSetup();
+    if (!map || !layersInitialized.current) return;
+    updateMapData(map, filteredReports);
   }, [filteredReports]);
 
   const toggle3DMode = () => {
@@ -166,10 +159,10 @@ export const AnalyticsPage: React.FC = () => {
     setIs3DMode(nextState);
     try {
       if (nextState) {
-        (mapInstance.current as any).setProjection({ type: 'globe' });
+        (mapInstance.current as any).setProjection?.({ type: 'globe' });
         mapInstance.current.easeTo({ pitch: 45, duration: 600 });
       } else {
-        (mapInstance.current as any).setProjection({ type: 'mercator' });
+        (mapInstance.current as any).setProjection?.({ type: 'mercator' });
         mapInstance.current.easeTo({ pitch: 0, duration: 600 });
       }
     } catch (_) {}
