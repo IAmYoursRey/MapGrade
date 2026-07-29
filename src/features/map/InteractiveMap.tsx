@@ -124,16 +124,6 @@ export const InteractiveMap: React.FC = () => {
       const currentUser = useAuthStore.getState().user;
       if (!hasMapMarkPermission(currentUser)) return;
 
-      try {
-        const layers: string[] = [];
-        if (map.getLayer('unclustered-point')) layers.push('unclustered-point');
-        if (map.getLayer('unclustered-glow')) layers.push('unclustered-glow');
-        if (layers.length > 0) {
-          const features = map.queryRenderedFeatures(e.point, { layers });
-          if (features.length > 0) return;
-        }
-      } catch (_) {}
-
       setManualCoords({ lat: e.lngLat.lat, lng: e.lngLat.lng });
       setIsFormOpen(true);
     });
