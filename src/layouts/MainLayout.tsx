@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Outlet, Link, useNavigate } from 'react-router-dom';
-import { ShieldAlert, MapPin, User, Moon, Sun, Menu, X, LogOut, Edit3, Shield } from 'lucide-react'; 
+import { ShieldAlert, MapPin, User as UserIcon, Moon, Sun, Menu, X, LogOut, Edit3, Shield, Users } from 'lucide-react'; 
 import { useThemeStore } from '@/store/useThemeStore';
-import { useAuthStore } from '@/store/useAuthStore';
+import { useAuthStore, isDevUser as checkIsDevUser } from '@/store/useAuthStore';
 
 export const MainLayout: React.FC = () => {
   const { isDarkMode, toggleTheme } = useThemeStore();
@@ -12,6 +12,9 @@ export const MainLayout: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const [isEditingUsername, setIsEditingUsername] = useState<boolean>(false);
   const [newUsername, setNewUsername] = useState<string>('');
+
+  const isDev = checkIsDevUser(user);
+  const isOfficerOrAdmin = isDev || user?.role === 'BPBD' || user?.role === 'ADMIN';
 
   const toggleMobileMenu = () => setIsMobileMenuOpen((prev) => !prev);
 
@@ -50,15 +53,16 @@ export const MainLayout: React.FC = () => {
             Peta Interaktif
           </Link>
           <Link to="/analytics/heatmap" className="hover:text-red-500 transition-colors">Heatmap Bencana</Link>
-          {(user?.role === 'DEV_UTAMA' || user?.role === 'BPBD' || user?.role === 'ADMIN') && (
+          {isOfficerOrAdmin && (
             <Link to="/dashboard/bpbd" className="flex items-center gap-1 text-amber-400 hover:text-amber-300 transition-colors font-bold">
               <Shield className="w-4 h-4" />
               Command Center
             </Link>
           )}
-          {user?.role === 'DEV_UTAMA' && (
+          {isDev && (
             <Link to="/dashboard/admin" className="flex items-center gap-1 text-purple-400 hover:text-purple-300 transition-colors font-bold">
-              Manajemen User
+              <Users className="w-4 h-4" />
+              Manajemen User (Dev)
             </Link>
           )}
           <Link to="/docs" className="hover:text-red-500 transition-colors">Dokumentasi</Link>
@@ -76,10 +80,10 @@ export const MainLayout: React.FC = () => {
           {user ? (
             <div className="hidden md:flex items-center gap-2">
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-800 border border-slate-700">
-                <User className="w-4 h-4 text-red-400" />
+                <UserIcon className="w-4 h-4 text-red-400" />
                 <span className="text-xs font-bold text-slate-200">{user.name}</span>
                 <span className="px-1.5 py-0.5 text-[9px] font-extrabold uppercase bg-red-500/20 text-red-400 rounded-md border border-red-500/30">
-                  {user.role === 'DEV_UTAMA' ? 'Dev Utama' : user.role}
+                  {isDev ? 'Dev Utama' : user.role}
                 </span>
                 <button
                   onClick={() => { setNewUsername(user.name); setIsEditingUsername(true); }}
@@ -104,7 +108,7 @@ export const MainLayout: React.FC = () => {
               to="/auth/login"
               className="hidden md:flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold text-sm shadow-md shadow-red-600/20 transition-all hover:scale-105"
             >
-              <User className="w-4 h-4" />
+              <UserIcon className="w-4 h-4" />
               Masuk
             </Link>
           )}
@@ -127,12 +131,12 @@ export const MainLayout: React.FC = () => {
               Peta Interaktif
             </Link>
             <Link to="/analytics/heatmap" onClick={toggleMobileMenu} className="hover:text-red-500 transition-colors">Heatmap Bencana</Link>
-            {(user?.role === 'DEV_UTAMA' || user?.role === 'BPBD' || user?.role === 'ADMIN') && (
+            {isOfficerOrAdmin && (
               <Link to="/dashboard/bpbd" onClick={toggleMobileMenu} className="text-amber-400 font-bold">
                 Command Center BPBD
               </Link>
             )}
-            {user?.role === 'DEV_UTAMA' && (
+            {isDev && (
               <Link to="/dashboard/admin" onClick={toggleMobileMenu} className="text-purple-400 font-bold">
                 Manajemen User (Dev)
               </Link>
@@ -143,12 +147,12 @@ export const MainLayout: React.FC = () => {
               {user ? (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between p-2.5 bg-slate-800 rounded-xl">
-                    <span className="text-xs font-bold text-slate-200">{user.name} ({user.role})</span>
+                    <span className="text-xs font-bold text-slate-200">{user.name} ({isDev ? 'Dev Utama' : user.role})</span>
                     <button
                       onClick={() => { setNewUsername(user.name); setIsEditingUsername(true); toggleMobileMenu(); }}
                       className="text-xs text-red-400 font-bold"
                     >
-                      Ubah Name
+                      Ubah Nama
                     </button>
                   </div>
                   <button
@@ -165,7 +169,7 @@ export const MainLayout: React.FC = () => {
                   onClick={toggleMobileMenu}
                   className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold text-sm"
                 >
-                  <User className="w-4 h-4" />
+                  <UserIcon className="w-4 h-4" />
                   Masuk
                 </Link>
               )}

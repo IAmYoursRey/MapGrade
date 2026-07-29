@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useMapStore, Report } from '@/store/useMapStore';
+import { formatIndonesiaTimestamp } from '@/utils/dateUtils';
 import { 
   X, 
   MapPin, 
@@ -144,7 +145,7 @@ export const ReportFormModal: React.FC = () => {
       latitude: coords?.lat || -7.2575,
       longitude: coords?.lng || 112.7521,
       status: 'UNVERIFIED', 
-      createdAt: new Date().toISOString(),
+      createdAt: formatIndonesiaTimestamp(),
       photos: photos.length > 0 ? photos : ['https://images.unsplash.com/photo-1547683905-f686c993aae5?auto=format&fit=crop&q=80&w=800'],
       videos,
       casualties: casualties ? parseInt(casualties) : 0,

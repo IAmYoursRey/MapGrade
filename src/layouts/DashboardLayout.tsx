@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { ShieldAlert, LayoutDashboard, Users, LogOut, Menu, X, Sun, Moon, Edit3 } from 'lucide-react';
-import { useAuthStore } from '@/store/useAuthStore';
+import { useAuthStore, isDevUser as checkIsDevUser } from '@/store/useAuthStore';
 import { useThemeStore } from '@/store/useThemeStore';
 import { NotificationDropdown } from '@/components/common/NotificationDropdown'; 
 
@@ -15,9 +15,11 @@ export const DashboardLayout: React.FC = () => {
   const [isEditingUsername, setIsEditingUsername] = useState<boolean>(false);
   const [newUsername, setNewUsername] = useState<string>('');
 
+  const isDev = checkIsDevUser(user);
+
   const navItems = [
     { path: '/dashboard/bpbd', label: 'Command Center', icon: LayoutDashboard },
-    { path: '/dashboard/admin', label: 'Manajemen User (Dev)', icon: Users },
+    ...(isDev ? [{ path: '/dashboard/admin', label: 'Manajemen User (Dev)', icon: Users }] : []),
   ];
 
   const toggleMobileMenu = () => setIsMobileMenuOpen((prev) => !prev);
@@ -50,7 +52,7 @@ export const DashboardLayout: React.FC = () => {
           </Link>
           <section className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800/50 space-y-1">
             <p className="text-[10px] font-extrabold text-blue-700 dark:text-blue-400 uppercase tracking-wider">
-              {user?.role === 'DEV_UTAMA' ? 'DEV UTAMA (FULL ACCESS)' : (user?.role || 'PETUGAS')}
+              {isDev ? 'DEV UTAMA (FULL ACCESS)' : (user?.role || 'PETUGAS')}
             </p>
             <div className="flex items-center justify-between">
               <p className="text-xs font-bold truncate text-slate-800 dark:text-slate-100">{user?.name || 'Raihan Ansari'}</p>
@@ -158,7 +160,7 @@ export const DashboardLayout: React.FC = () => {
 
               <section className="my-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800/50">
                 <p className="text-xs font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider">
-                  {user?.role === 'DEV_UTAMA' ? 'DEV UTAMA' : (user?.role || 'PETUGAS')}
+                  {isDev ? 'DEV UTAMA (FULL ACCESS)' : (user?.role || 'PETUGAS')}
                 </p>
                 <p className="text-sm font-semibold truncate text-slate-800 dark:text-slate-100">
                   {user?.name || 'Raihan Ansari'}

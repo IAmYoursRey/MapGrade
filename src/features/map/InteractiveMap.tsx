@@ -2,7 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { useMapStore, MapLayerType } from '@/store/useMapStore';
-import { Layers, X, MapPin } from 'lucide-react';
+import { useAuthStore, isDevUser as checkIsDevUser, hasMapMarkPermission } from '@/store/useAuthStore';
+import { Layers, X, MapPin, Globe } from 'lucide-react';
 import { setupMapLayers } from './setupMapLayers';
 
 const MAP_STYLES: Record<string, { style: any; label: string }> = {
@@ -87,17 +88,12 @@ const MAP_STYLES: Record<string, { style: any; label: string }> = {
   }
 };
 
-const FOG_CONFIG = {
-  'color': 'rgb(12, 20, 42)',
-  'high-color': 'rgb(20, 30, 60)',
-  'horizon-blend': 0.08,
-  'space-color': 'rgb(5, 8, 18)',
-  'star-intensity': 0.6,
-};
-
 export const InteractiveMap: React.FC = () => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<maplibregl.Map | null>(null);
+
+  const { user } = useAuthStore();
+  const canMarkMap = hasMapMarkPermission(user);
 
   const store = useMapStore();
   const reports = store.reports || [];
@@ -109,6 +105,7 @@ export const InteractiveMap: React.FC = () => {
   const setActiveLayer = store.setActiveLayer;
 
   const [showLayerSelector, setShowLayerSelector] = useState(false);
+  const [is3DMode, setIs3DMode] = useState(false);
 
   const onReportClickRef = useRef((report: any) => {
     if (typeof setSelectedReport === 'function') setSelectedReport(report);
@@ -132,7 +129,8 @@ export const InteractiveMap: React.FC = () => {
       style: initialStyle,
       center: [112.7521, -7.2575],
       zoom: 10,
-      projection: { type: 'globe' },
+      pitch: 0,
+      projection: { type: 'mercator' },
       antialias: true,
       maxZoom: 19,
       attributionControl: false,
@@ -140,24 +138,12 @@ export const InteractiveMap: React.FC = () => {
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: true, showZoom: true, visualizePitch: true }), 'bottom-right');
     map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
-    map.dragRotate.enable();
-    map.touchPitch.enable();
-
-    map.on('style.load', () => {
-      try {
-        (map as any).setFog(FOG_CONFIG);
-      } catch (_) {}
-    });
 
     map.on('click', (e) => {
-      const targetLayers = ['clusters-core', 'unclustered-point'].filter(id => {
-        try { return map.getLayer(id); } catch { return false; }
-      });
-      const features = targetLayers.length > 0
-        ? map.queryRenderedFeatures(e.point, { layers: targetLayers })
-        : [];
+      const currentUser = useAuthStore.getState().user;
+      const authorized = hasMapMarkPermission(currentUser);
 
-      if (!features || features.length === 0) {
+      if (authorized) {
         setManualCoords({ lat: e.lngLat.lat, lng: e.lngLat.lng });
         setIsFormOpen(true);
       }
@@ -182,18 +168,49 @@ export const InteractiveMap: React.FC = () => {
     setupMapLayers(mapInstance.current, reports, (r) => onReportClickRef.current(r), false);
   }, [reports]);
 
+  const toggle3DMode = () => {
+    if (!mapInstance.current) return;
+    const nextState = !is3DMode;
+    setIs3DMode(nextState);
+
+    try {
+      if (nextState) {
+        (mapInstance.current as any).setProjection({ type: 'globe' });
+        mapInstance.current.easeTo({ pitch: 45, duration: 600 });
+      } else {
+        (mapInstance.current as any).setProjection({ type: 'mercator' });
+        mapInstance.current.easeTo({ pitch: 0, duration: 600 });
+      }
+    } catch (_) {}
+  };
+
   return (
     <section className="relative w-full h-full">
       <div ref={mapRef} className="relative w-full h-full z-0 bg-slate-950" />
 
-      <aside className="absolute top-3 left-3 sm:top-6 sm:left-6 z-[1000] flex items-center gap-2">
-        <article className="bg-slate-900/90 backdrop-blur-md px-3.5 py-2 rounded-xl sm:rounded-2xl border border-slate-800 shadow-xl flex items-center gap-2 text-xs font-semibold text-slate-300">
-          <MapPin className="w-4 h-4 text-red-500 animate-pulse" />
-          <span>Klik lokasi mana saja di peta untuk tandai bencana</span>
-        </article>
-      </aside>
+      {canMarkMap && (
+        <aside className="absolute top-3 left-3 sm:top-6 sm:left-6 z-[1000] flex items-center gap-2">
+          <article className="bg-slate-900/90 backdrop-blur-md px-3.5 py-2 rounded-xl sm:rounded-2xl border border-red-500/30 shadow-xl flex items-center gap-2 text-xs font-semibold text-slate-200">
+            <MapPin className="w-4 h-4 text-red-500 animate-pulse" />
+            <span>Otoritas Akses: Klik lokasi mana saja di peta untuk tandai bencana tanpa GPS</span>
+          </article>
+        </aside>
+      )}
 
-      <aside className="absolute top-3 right-3 sm:top-6 sm:right-6 z-[1000]">
+      <aside className="absolute top-3 right-3 sm:top-6 sm:right-6 z-[1000] flex items-center gap-2">
+        <button
+          onClick={toggle3DMode}
+          className={`p-2.5 sm:p-3 rounded-xl sm:rounded-2xl shadow-xl border flex items-center gap-2 transition-all font-bold text-xs ${
+            is3DMode
+              ? 'bg-blue-600 border-blue-500 text-white shadow-blue-600/30'
+              : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-white border-slate-200 dark:border-slate-700 hover:bg-slate-50'
+          }`}
+          title="Alihkan Tampilan 2D (Ringan) / 3D"
+        >
+          <Globe className={`w-4 h-4 sm:w-5 sm:h-5 ${is3DMode ? 'animate-spin' : 'text-blue-500'}`} />
+          <span className="hidden sm:inline">{is3DMode ? 'Mode 3D (Aktif)' : 'Mode 2D (Ringan)'}</span>
+        </button>
+
         <button
           onClick={() => setShowLayerSelector(!showLayerSelector)}
           className="p-2.5 sm:p-3 bg-white dark:bg-slate-800 text-slate-800 dark:text-white rounded-xl sm:rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 flex items-center gap-2 hover:bg-slate-50 transition-all font-bold text-xs"
@@ -203,7 +220,7 @@ export const InteractiveMap: React.FC = () => {
         </button>
 
         {showLayerSelector && (
-          <nav className="absolute right-0 mt-2 w-48 sm:w-56 bg-white dark:bg-slate-800 rounded-xl sm:rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 p-3 sm:p-4 space-y-2">
+          <nav className="absolute right-0 top-12 mt-2 w-48 sm:w-56 bg-white dark:bg-slate-800 rounded-xl sm:rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 p-3 sm:p-4 space-y-2">
             <header className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-700">
               <span className="text-[10px] sm:text-xs font-extrabold uppercase text-slate-500">Pilih Tampilan</span>
               <button onClick={() => setShowLayerSelector(false)}>

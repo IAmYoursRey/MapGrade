@@ -9,7 +9,7 @@ import { ReportDrawer } from '@/features/report/ReportDrawer';
 import {
   Info, ArrowLeft, Activity, Users, BarChart2, Flame,
   CheckCircle2, Clock, AlertTriangle, XCircle, MapPin, Shield,
-  ChevronRight, Filter
+  ChevronRight, Filter, Globe
 } from 'lucide-react';
 
 const DARK_MAP_STYLE: any = {
@@ -38,14 +38,6 @@ const DARK_MAP_STYLE: any = {
   ]
 };
 
-const FOG_CONFIG = {
-  'color': 'rgb(8, 12, 30)',
-  'high-color': 'rgb(15, 22, 50)',
-  'horizon-blend': 0.06,
-  'space-color': 'rgb(3, 5, 12)',
-  'star-intensity': 0.8,
-};
-
 const STATUS_CONFIG: Record<ReportStatus, { label: string; color: string; bg: string; border: string; icon: React.ReactNode }> = {
   UNVERIFIED:   { label: 'Belum Terverifikasi', color: 'text-red-400',     bg: 'bg-red-950/40',     border: 'border-red-800/50',     icon: <XCircle className="w-3.5 h-3.5" /> },
   NEEDS_REVIEW: { label: 'Butuh Tinjauan',      color: 'text-amber-400',   bg: 'bg-amber-950/40',   border: 'border-amber-800/50',   icon: <AlertTriangle className="w-3.5 h-3.5" /> },
@@ -71,6 +63,7 @@ export const AnalyticsPage: React.FC = () => {
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
   const [showStatsPanel, setShowStatsPanel] = useState<boolean>(true);
   const [showOfficerPanel, setShowOfficerPanel] = useState<boolean>(false);
+  const [is3DMode, setIs3DMode] = useState<boolean>(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   const analyticsData = useMemo(() => {
@@ -107,7 +100,7 @@ export const AnalyticsPage: React.FC = () => {
     if (!mapInstance.current) return;
     mapInstance.current.flyTo({
       center: [report.longitude, report.latitude],
-      zoom: 15, duration: 1200, pitch: 45
+      zoom: 15, duration: 800
     });
     setSelectedReport(report);
     setIsDrawerOpen(true);
@@ -127,19 +120,14 @@ export const AnalyticsPage: React.FC = () => {
       style: DARK_MAP_STYLE,
       center: [113.9213, -0.7893],
       zoom: 4,
-      projection: { type: 'globe' },
+      pitch: 0,
+      projection: { type: 'mercator' },
       antialias: true, maxZoom: 19, attributionControl: false,
     }) as maplibregl.Map;
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: true, showZoom: true, visualizePitch: true }), 'top-right');
     map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
-    map.dragRotate.enable();
-    map.touchPitch.enable();
-    map.on('style.load', () => {
-      try {
-        (map as any).setFog(FOG_CONFIG);
-      } catch (_) {}
-    });
+
     mapInstance.current = map;
     return () => { mapInstance.current?.remove(); mapInstance.current = null; };
   }, []);
@@ -155,6 +143,22 @@ export const AnalyticsPage: React.FC = () => {
     if (!mapInstance.current) return;
     setupMapLayers(mapInstance.current, filteredReports, r => onReportClickRef.current(r), true);
   }, [filteredReports]);
+
+  const toggle3DMode = () => {
+    if (!mapInstance.current) return;
+    const nextState = !is3DMode;
+    setIs3DMode(nextState);
+
+    try {
+      if (nextState) {
+        (mapInstance.current as any).setProjection({ type: 'globe' });
+        mapInstance.current.easeTo({ pitch: 45, duration: 600 });
+      } else {
+        (mapInstance.current as any).setProjection({ type: 'mercator' });
+        mapInstance.current.easeTo({ pitch: 0, duration: 600 });
+      }
+    } catch (_) {}
+  };
 
   const statCards = [
     { label: 'Total Insiden', value: analyticsData.total,      color: 'text-white',        bg: 'bg-slate-800/80',   border: 'border-slate-700', status: 'ALL',        icon: <Activity className="w-4 h-4 text-slate-400" /> },
@@ -187,6 +191,20 @@ export const AnalyticsPage: React.FC = () => {
                 {cat === 'ALL' ? `Semua (${reports.length})` : cat}
               </button>
             ))}
+
+            <button
+              onClick={toggle3DMode}
+              className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl border transition-all shrink-0 flex items-center gap-1 text-[11px] font-bold ${
+                is3DMode
+                  ? 'bg-blue-600 border-blue-500 text-white shadow-blue-600/30'
+                  : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+              }`}
+              title="Alihkan Tampilan 2D / 3D"
+            >
+              <Globe className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${is3DMode ? 'animate-spin' : 'text-blue-400'}`} />
+              <span className="hidden sm:inline">{is3DMode ? '3D' : '2D'}</span>
+            </button>
+
             <button onClick={() => setShowStatsPanel(p => !p)} title="Panel Ringkasan"
               className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl border transition-all shrink-0 ${showStatsPanel ? 'bg-red-600/20 border-red-500 text-red-400' : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'}`}>
               <BarChart2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />

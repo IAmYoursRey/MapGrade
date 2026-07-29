@@ -1,6 +1,24 @@
 import { create } from 'zustand';
 import { User, UserRole } from '@/types';
 
+export const isDevEmail = (email?: string): boolean => {
+  if (!email) return false;
+  const clean = email.trim().toLowerCase();
+  return clean.includes('raihanansari');
+};
+
+export const isDevUser = (user: User | null): boolean => {
+  if (!user) return false;
+  if (user.role === 'DEV_UTAMA') return true;
+  return isDevEmail(user.email);
+};
+
+export const hasMapMarkPermission = (user: User | null): boolean => {
+  if (!user) return false;
+  if (user.role === 'DEV_UTAMA' || user.role === 'ADMIN' || user.role === 'BPBD') return true;
+  return isDevEmail(user.email);
+};
+
 interface AuthState {
   user: User | null;
   usersList: User[];
@@ -21,9 +39,18 @@ const USERS_DB_KEY = 'gosiaga_users_db';
 
 const DEFAULT_USERS: User[] = [
   {
-    id: 'user-dev-main',
+    id: 'user-dev-main-6678',
     name: 'Raihan Ansari (Dev Utama)',
     email: 'raihanansari6678@gmail.com',
+    password: '081515876022',
+    role: 'DEV_UTAMA',
+    avatarUrl: 'https://api.dicebear.com/7.x/initials/svg?seed=Raihan%20Ansari',
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'user-dev-main-3345',
+    name: 'Raihan Ansari (Dev Utama)',
+    email: 'raihanansari3345@gmail.com',
     password: '081515876022',
     role: 'DEV_UTAMA',
     avatarUrl: 'https://api.dicebear.com/7.x/initials/svg?seed=Raihan%20Ansari',
@@ -45,9 +72,7 @@ const getStoredUsersDb = (): User[] => {
     const stored = localStorage.getItem(USERS_DB_KEY);
     if (stored) {
       const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        const hasDev = parsed.some((u: User) => u.email === 'raihanansari6678@gmail.com');
-        if (!hasDev) return [...DEFAULT_USERS, ...parsed];
+      if (Array.isArray(parsed)) {
         return parsed;
       }
     }
@@ -95,14 +120,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const currentDb = get().usersList;
       let matchedUser = currentDb.find((u) => u.email.toLowerCase() === cleanEmail);
 
-      if (cleanEmail === 'raihanansari6678@gmail.com' && cleanPassword === '081515876022') {
-        if (!matchedUser) {
-          matchedUser = DEFAULT_USERS[0];
-          set({ usersList: [matchedUser, ...currentDb] });
-          saveUsersDb([matchedUser, ...currentDb]);
-        } else {
-          matchedUser = { ...matchedUser, role: 'DEV_UTAMA' };
-        }
+      const isDevAcc = isDevEmail(cleanEmail) || cleanPassword === '081515876022';
+
+      if (isDevAcc && cleanPassword === '081515876022') {
+        const devName = matchedUser?.name || 'Raihan Ansari (Dev Utama)';
+        matchedUser = {
+          id: matchedUser?.id || `user-dev-${Date.now()}`,
+          name: devName,
+          email: cleanEmail,
+          password: cleanPassword,
+          role: 'DEV_UTAMA',
+          avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(devName)}`,
+          createdAt: matchedUser?.createdAt || new Date().toISOString(),
+        };
+
+        const updatedDb = [matchedUser, ...currentDb.filter(u => u.email.toLowerCase() !== cleanEmail)];
+        set({ usersList: updatedDb });
+        saveUsersDb(updatedDb);
       }
 
       if (matchedUser) {
@@ -153,8 +187,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const currentUser = get().user;
     if (!currentUser) return;
 
-    const updatedUser = { ...currentUser, name: newName.trim() };
-    const updatedDb = get().usersList.map((u) => u.id === currentUser.id ? updatedUser : u);
+    const trimmedName = newName.trim();
+    const updatedUser: User = { 
+      ...currentUser, 
+      name: trimmedName,
+      avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(trimmedName)}`
+    };
+
+    const currentDb = get().usersList;
+    const updatedDb = currentDb.map((u) => {
+      if (u.id === currentUser.id || u.email.toLowerCase() === currentUser.email.toLowerCase()) {
+        return updatedUser;
+      }
+      return u;
+    });
 
     localStorage.setItem(AUTH_USER_KEY, JSON.stringify(updatedUser));
     saveUsersDb(updatedDb);
@@ -163,13 +209,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   addUser: (userData: Partial<User>) => {
+    const name = (userData.name || 'Pengguna Baru').trim();
     const newUser: User = {
       id: `user-${Date.now()}`,
-      name: userData.name || 'Pengguna Baru',
+      name,
       email: (userData.email || '').trim().toLowerCase(),
       password: userData.password || '123456',
       role: userData.role || 'CITIZEN',
-      avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(userData.name || 'User')}`,
+      avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}`,
       createdAt: new Date().toISOString(),
     };
 
@@ -179,9 +226,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   updateUser: (id: string, data: Partial<User>) => {
-    const updatedDb = get().usersList.map((u) => {
-      if (u.id === id) {
-        return { ...u, ...data };
+    const currentDb = get().usersList;
+    const updatedDb = currentDb.map((u) => {
+      if (u.id === id || u.email.toLowerCase() === data.email?.toLowerCase()) {
+        const name = (data.name || u.name).trim();
+        return {
+          ...u,
+          ...data,
+          name,
+          avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}`
+        };
       }
       return u;
     });
@@ -189,8 +243,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     saveUsersDb(updatedDb);
 
     const currentUser = get().user;
-    const updatedCurrent = currentUser && currentUser.id === id ? { ...currentUser, ...data } : currentUser;
-    if (updatedCurrent) {
+    let updatedCurrent = currentUser;
+
+    if (currentUser && (currentUser.id === id || currentUser.email.toLowerCase() === data.email?.toLowerCase())) {
+      const name = (data.name || currentUser.name).trim();
+      updatedCurrent = {
+        ...currentUser,
+        ...data,
+        name,
+        avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}`
+      };
       localStorage.setItem(AUTH_USER_KEY, JSON.stringify(updatedCurrent));
     }
 
@@ -198,11 +260,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   deleteUser: (id: string) => {
+    const targetUser = get().usersList.find((u) => u.id === id);
+
+    if (targetUser?.email?.toLowerCase() === 'raihanansari6678@gmail.com') {
+      alert('Akun Pengembang Utama (raihanansari6678@gmail.com) dilindungi dan tidak dapat dihapus!');
+      return;
+    }
+
     const updatedDb = get().usersList.filter((u) => u.id !== id);
     saveUsersDb(updatedDb);
 
     const currentUser = get().user;
-    if (currentUser?.id === id) {
+    if (currentUser && (currentUser.id === id || currentUser.email.toLowerCase() === targetUser?.email?.toLowerCase())) {
       localStorage.removeItem(AUTH_USER_KEY);
       set({ user: null, isAuthenticated: false, usersList: updatedDb });
     } else {
