@@ -92,7 +92,7 @@ const MAP_STYLES: Record<string, { style: any; label: string }> = {
 export const InteractiveMap: React.FC = () => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<maplibregl.Map | null>(null);
-  const setStyleCallCount = useRef(0);
+  const prevLayerRef = useRef<string | null>(null);
 
   const { user } = useAuthStore();
   const canMarkMap = hasMapMarkPermission(user);
@@ -122,10 +122,10 @@ export const InteractiveMap: React.FC = () => {
   }, [setSelectedReport, setIsDrawerOpen]);
 
   useEffect(() => {
-    console.log('[LOG 18] useEffect Map Init fired');
     if (!mapRef.current || mapInstance.current) return;
 
     const initialStyle = MAP_STYLES[activeLayer]?.style || MAP_STYLES.dark.style;
+    prevLayerRef.current = activeLayer;
 
     const map = new (maplibregl as any).Map({
       container: mapRef.current,
@@ -140,23 +140,22 @@ export const InteractiveMap: React.FC = () => {
       workerUrl: maplibreWorkerUrl
     }) as maplibregl.Map;
 
-    console.log('[LOG 1] Map instance created');
-
-    map.on('style.load', () => {
-      console.log('[LOG 2] Event style.load fired');
-      console.log('[LOG 17] map.isStyleLoaded():', map.isStyleLoaded());
-    });
-
-    map.on('styledata', () => {
-      console.log('[LOG 3] Event styledata fired');
-    });
-
-    map.on('idle', () => {
-      console.log('[LOG 4] Event idle fired');
-    });
-
     map.addControl(new maplibregl.NavigationControl({ showCompass: true, showZoom: true, visualizePitch: true }), 'bottom-right');
     map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
+
+    const handleInitialLoad = () => {
+      if (mapInstance.current) {
+        const currentReports = useMapStore.getState().reports || [];
+        setupMapLayers(mapInstance.current, currentReports, (r) => onReportClickRef.current(r), false);
+      }
+    };
+
+    if (map.isStyleLoaded()) {
+      handleInitialLoad();
+    } else {
+      map.once('load', handleInitialLoad);
+      map.once('style.load', handleInitialLoad);
+    }
 
     map.on('click', (e) => {
       const currentUser = useAuthStore.getState().user;
@@ -194,25 +193,19 @@ export const InteractiveMap: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    console.log('[LOG 18] useEffect activeLayer fired');
-    console.log('[LOG 19] Dependency changed: activeLayer ->', activeLayer);
     if (!mapInstance.current) return;
+    if (prevLayerRef.current === activeLayer) return;
+
+    prevLayerRef.current = activeLayer;
     const targetStyle = MAP_STYLES[activeLayer]?.style || MAP_STYLES.dark.style;
 
     const onStyleLoad = () => {
-      console.log('[LOG 17] map.isStyleLoaded():', mapInstance.current?.isStyleLoaded());
       if (mapInstance.current) {
         setupMapLayers(mapInstance.current, reports, (r) => onReportClickRef.current(r), false);
       }
     };
 
-    setStyleCallCount.current += 1;
-    console.log('[LOG 20] setStyle call count:', setStyleCallCount.current);
-    console.log('[LOG 5] BEFORE map.setStyle()', { activeLayer });
-
     mapInstance.current.setStyle(targetStyle);
-
-    console.log('[LOG 6] AFTER map.setStyle()');
 
     if (mapInstance.current.isStyleLoaded()) {
       onStyleLoad();
@@ -222,11 +215,7 @@ export const InteractiveMap: React.FC = () => {
   }, [activeLayer]);
 
   useEffect(() => {
-    console.log('[LOG 18] useEffect reports fired');
-    console.log('[LOG 19] Dependency changed: reports.length ->', reports.length);
     if (!mapInstance.current) return;
-    console.log('[LOG 17] map.isStyleLoaded():', mapInstance.current.isStyleLoaded());
-
     if (mapInstance.current.isStyleLoaded()) {
       setupMapLayers(mapInstance.current, reports, (r) => onReportClickRef.current(r), false);
     } else {
