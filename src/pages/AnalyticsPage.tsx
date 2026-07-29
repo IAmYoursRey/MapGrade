@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as maplibregl from 'maplibre-gl';
+import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { useMapStore, ReportStatus } from '@/store/useMapStore';
 import { NotificationDropdown } from '@/components/common/NotificationDropdown';
@@ -123,6 +124,7 @@ export const AnalyticsPage: React.FC = () => {
       pitch: 0,
       projection: { type: 'mercator' },
       antialias: true, maxZoom: 19, attributionControl: false,
+      workerUrl: maplibreWorkerUrl
     }) as maplibregl.Map;
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: true, showZoom: true, visualizePitch: true }), 'top-right');

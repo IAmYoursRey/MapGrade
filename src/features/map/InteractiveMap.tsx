@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as maplibregl from 'maplibre-gl';
+import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { useMapStore, MapLayerType } from '@/store/useMapStore';
 import { useAuthStore, isDevUser as checkIsDevUser, hasMapMarkPermission } from '@/store/useAuthStore';
@@ -134,6 +135,7 @@ export const InteractiveMap: React.FC = () => {
       antialias: true,
       maxZoom: 19,
       attributionControl: false,
+      workerUrl: maplibreWorkerUrl
     }) as maplibregl.Map;
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: true, showZoom: true, visualizePitch: true }), 'bottom-right');
