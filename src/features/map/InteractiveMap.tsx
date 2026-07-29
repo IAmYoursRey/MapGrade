@@ -180,7 +180,7 @@ export const InteractiveMap: React.FC = () => {
     if (!mapInstance.current) return;
     const targetStyle = MAP_STYLES[activeLayer]?.style || MAP_STYLES.dark.style;
 
-    const renderLayers = () => {
+    const onStyleLoad = () => {
       if (mapInstance.current) {
         setupMapLayers(mapInstance.current, reports, (r) => onReportClickRef.current(r), false);
       }
@@ -189,12 +189,24 @@ export const InteractiveMap: React.FC = () => {
     mapInstance.current.setStyle(targetStyle);
 
     if (mapInstance.current.isStyleLoaded()) {
-      renderLayers();
+      onStyleLoad();
     } else {
-      mapInstance.current.once('style.load', renderLayers);
-      mapInstance.current.once('styledata', renderLayers);
+      mapInstance.current.once('style.load', onStyleLoad);
     }
-  }, [activeLayer, reports]);
+  }, [activeLayer]);
+
+  useEffect(() => {
+    if (!mapInstance.current) return;
+    if (mapInstance.current.isStyleLoaded()) {
+      setupMapLayers(mapInstance.current, reports, (r) => onReportClickRef.current(r), false);
+    } else {
+      mapInstance.current.once('style.load', () => {
+        if (mapInstance.current) {
+          setupMapLayers(mapInstance.current, reports, (r) => onReportClickRef.current(r), false);
+        }
+      });
+    }
+  }, [reports]);
 
   const toggle3DMode = () => {
     if (!mapInstance.current) return;
