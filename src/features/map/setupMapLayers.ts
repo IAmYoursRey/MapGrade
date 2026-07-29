@@ -53,7 +53,7 @@ const buildGeoJSON = (reports: Report[]): any => ({
         category: catKey,
         status: r.status || 'UNVERIFIED',
         icon: CATEGORY_ICONS[catKey] || '⚠️',
-        validationsCount: r.validationsCount || 1,
+        validationsCount: Math.max(1, r.validationsCount || 1),
         reportData: JSON.stringify(r)
       }
     };
@@ -69,11 +69,6 @@ export const setupMapLayers = (
   const geojson = buildGeoJSON(reports);
 
   const applyLayers = () => {
-    if (!map.isStyleLoaded()) {
-      map.once('style.load', applyLayers);
-      return;
-    }
-
     try {
       if (map.getSource(SOURCE_ID)) {
         (map.getSource(SOURCE_ID) as maplibregl.GeoJSONSource).setData(geojson);
@@ -94,7 +89,7 @@ export const setupMapLayers = (
 
       if (isHeatmapMode) {
         LAYER_IDS.forEach((id) => {
-          if (id !== 'gosiaga-heatmap-layer' && map.getLayer(id)) {
+          if (id !== 'gosiaga-heatmap-layer' && id !== 'unclustered-point' && map.getLayer(id)) {
             map.removeLayer(id);
           }
         });
@@ -105,20 +100,14 @@ export const setupMapLayers = (
           source: SOURCE_ID,
           maxzoom: 16,
           paint: {
-            'heatmap-weight': [
-              'interpolate',
-              ['linear'],
-              ['get', 'validationsCount'],
-              1, 0.5,
-              10, 1.0
-            ],
+            'heatmap-weight': 1,
             'heatmap-intensity': [
               'interpolate',
               ['linear'],
               ['zoom'],
-              0, 0.8,
-              6, 1.5,
-              12, 2.5
+              0, 1,
+              6, 2,
+              12, 3
             ],
             'heatmap-color': [
               'interpolate',
@@ -134,13 +123,25 @@ export const setupMapLayers = (
               'interpolate',
               ['exponential', 1.4],
               ['zoom'],
-              0, 6,
-              4, 14,
-              7, 28,
-              10, 42,
-              14, 60
+              0, 10,
+              4, 20,
+              7, 35,
+              10, 50,
+              14, 75
             ],
             'heatmap-opacity': 0.9
+          }
+        });
+
+        addLayerToTop({
+          id: 'unclustered-point',
+          type: 'circle',
+          source: SOURCE_ID,
+          paint: {
+            'circle-color': '#ef4444',
+            'circle-radius': 6,
+            'circle-stroke-width': 2,
+            'circle-stroke-color': '#ffffff'
           }
         });
       } else {
@@ -187,25 +188,6 @@ export const setupMapLayers = (
             'circle-stroke-color': '#ffffff'
           }
         });
-
-        addLayerToTop({
-          id: 'unclustered-label',
-          type: 'symbol',
-          source: SOURCE_ID,
-          layout: {
-            'text-field': ['concat', ['get', 'icon'], ' ', ['get', 'title']],
-            'text-size': 12,
-            'text-offset': [0, 1.4],
-            'text-anchor': 'top',
-            'text-allow-overlap': true,
-            'text-ignore-placement': true
-          },
-          paint: {
-            'text-color': '#ffffff',
-            'text-halo-color': 'rgba(15, 23, 42, 0.95)',
-            'text-halo-width': 2.5
-          }
-        });
       }
     } catch (err) {
       console.error('applyLayers error:', err);
@@ -215,7 +197,7 @@ export const setupMapLayers = (
   applyLayers();
 
   const handlePointClick = (e: maplibregl.MapMouseEvent & { features?: maplibregl.MapGeoJSONFeature[] }) => {
-    const features = map.queryRenderedFeatures(e.point, { layers: ['unclustered-point', 'unclustered-label', 'unclustered-glow'] });
+    const features = map.queryRenderedFeatures(e.point, { layers: ['unclustered-point', 'unclustered-glow'] });
     if (!features.length) return;
     try {
       const reportDataStr = features[0].properties.reportData;
@@ -228,18 +210,14 @@ export const setupMapLayers = (
 
   try {
     map.off('click', 'unclustered-point', handlePointClick);
-    map.off('click', 'unclustered-label', handlePointClick);
     map.off('click', 'unclustered-glow', handlePointClick);
   } catch (_) {}
 
   map.on('click', 'unclustered-point', handlePointClick);
-  map.on('click', 'unclustered-label', handlePointClick);
   map.on('click', 'unclustered-glow', handlePointClick);
 
   map.on('mouseenter', 'unclustered-point', () => { map.getCanvas().style.cursor = 'pointer'; });
   map.on('mouseleave', 'unclustered-point', () => { map.getCanvas().style.cursor = ''; });
-  map.on('mouseenter', 'unclustered-label', () => { map.getCanvas().style.cursor = 'pointer'; });
-  map.on('mouseleave', 'unclustered-label', () => { map.getCanvas().style.cursor = ''; });
 };
 
 export const teardownMapLayers = (map: maplibregl.Map) => {
