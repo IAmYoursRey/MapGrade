@@ -13,7 +13,31 @@ import {
   ChevronRight, Filter, Globe
 } from 'lucide-react';
 
-const DARK_MAP_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
+const DARK_MAP_STYLE: any = {
+  version: 8,
+  sources: {
+    'carto-dark': {
+      type: 'raster',
+      tiles: [
+        'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+        'https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+        'https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+        'https://d.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'
+      ],
+      tileSize: 256,
+      attribution: '&copy; OpenStreetMap &copy; CARTO'
+    }
+  },
+  layers: [
+    {
+      id: 'carto-dark-layer',
+      type: 'raster',
+      source: 'carto-dark',
+      minzoom: 0,
+      maxzoom: 19
+    }
+  ]
+};
 
 const STATUS_CONFIG: Record<ReportStatus, { label: string; color: string; bg: string; border: string; icon: React.ReactNode }> = {
   UNVERIFIED:   { label: 'Belum Terverifikasi', color: 'text-red-400',     bg: 'bg-red-950/40',     border: 'border-red-800/50',     icon: <XCircle className="w-3.5 h-3.5" /> },
@@ -106,6 +130,17 @@ export const AnalyticsPage: React.FC = () => {
     map.addControl(new maplibregl.NavigationControl({ showCompass: true, showZoom: true, visualizePitch: true }), 'top-right');
     map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
 
+    const handleInitialLoad = () => {
+      const currentReports = useMapStore.getState().reports || [];
+      setupMapLayers(map, currentReports, r => onReportClickRef.current(r), true);
+    };
+
+    map.on('load', handleInitialLoad);
+    map.on('style.load', handleInitialLoad);
+    map.on('styledata', handleInitialLoad);
+    map.on('idle', handleInitialLoad);
+    handleInitialLoad();
+
     const resizeObserver = new ResizeObserver(() => {
       if (mapInstance.current) {
         mapInstance.current.resize();
@@ -133,18 +168,7 @@ export const AnalyticsPage: React.FC = () => {
 
   useEffect(() => {
     if (!mapInstance.current) return;
-
-    const renderHeatmap = () => {
-      if (mapInstance.current) {
-        setupMapLayers(mapInstance.current, filteredReports, r => onReportClickRef.current(r), true);
-      }
-    };
-
-    if (mapInstance.current.isStyleLoaded()) {
-      renderHeatmap();
-    } else {
-      mapInstance.current.once('style.load', renderHeatmap);
-    }
+    setupMapLayers(mapInstance.current, filteredReports, r => onReportClickRef.current(r), true);
   }, [filteredReports]);
 
   const toggle3DMode = () => {

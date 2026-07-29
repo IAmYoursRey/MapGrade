@@ -144,18 +144,15 @@ export const InteractiveMap: React.FC = () => {
     map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
 
     const handleInitialLoad = () => {
-      if (mapInstance.current) {
-        const currentReports = useMapStore.getState().reports || [];
-        setupMapLayers(mapInstance.current, currentReports, (r) => onReportClickRef.current(r), false);
-      }
+      const currentReports = useMapStore.getState().reports || [];
+      setupMapLayers(map, currentReports, (r) => onReportClickRef.current(r), false);
     };
 
-    if (map.isStyleLoaded()) {
-      handleInitialLoad();
-    } else {
-      map.once('load', handleInitialLoad);
-      map.once('style.load', handleInitialLoad);
-    }
+    map.on('load', handleInitialLoad);
+    map.on('style.load', handleInitialLoad);
+    map.on('styledata', handleInitialLoad);
+    map.on('idle', handleInitialLoad);
+    handleInitialLoad();
 
     map.on('click', (e) => {
       const currentUser = useAuthStore.getState().user;
@@ -206,25 +203,13 @@ export const InteractiveMap: React.FC = () => {
     };
 
     mapInstance.current.setStyle(targetStyle);
-
-    if (mapInstance.current.isStyleLoaded()) {
-      onStyleLoad();
-    } else {
-      mapInstance.current.once('style.load', onStyleLoad);
-    }
+    onStyleLoad();
+    mapInstance.current.on('style.load', onStyleLoad);
   }, [activeLayer]);
 
   useEffect(() => {
     if (!mapInstance.current) return;
-    if (mapInstance.current.isStyleLoaded()) {
-      setupMapLayers(mapInstance.current, reports, (r) => onReportClickRef.current(r), false);
-    } else {
-      mapInstance.current.once('style.load', () => {
-        if (mapInstance.current) {
-          setupMapLayers(mapInstance.current, reports, (r) => onReportClickRef.current(r), false);
-        }
-      });
-    }
+    setupMapLayers(mapInstance.current, reports, (r) => onReportClickRef.current(r), false);
   }, [reports]);
 
   const toggle3DMode = () => {
