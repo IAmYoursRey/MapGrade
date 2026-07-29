@@ -74,6 +74,7 @@ export const InteractiveMap: React.FC = () => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<maplibregl.Map | null>(null);
   const layersInitialized = useRef(false);
+  const initialMount = useRef(true);
 
   const { user } = useAuthStore();
   const canMarkMap = hasMapMarkPermission(user);
@@ -152,6 +153,10 @@ export const InteractiveMap: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    if (initialMount.current) {
+      initialMount.current = false;
+      return;
+    }
     const map = mapInstance.current;
     if (!map) return;
 

@@ -49,6 +49,7 @@ export const AnalyticsPage: React.FC = () => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<maplibregl.Map | null>(null);
   const layersInitialized = useRef(false);
+  const initialMount = useRef(true);
 
   const navigate = useNavigate();
   const { reports = [], setSelectedReport, setIsDrawerOpen, updateReportStatus } = useMapStore();
@@ -148,6 +149,10 @@ export const AnalyticsPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    if (initialMount.current) {
+      initialMount.current = false;
+      return;
+    }
     const map = mapInstance.current;
     if (!map || !layersInitialized.current) return;
     updateMapData(map, filteredReports);
