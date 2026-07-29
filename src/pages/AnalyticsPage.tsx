@@ -155,7 +155,18 @@ export const AnalyticsPage: React.FC = () => {
 
   useEffect(() => {
     if (!mapInstance.current) return;
-    setupMapLayers(mapInstance.current, filteredReports, r => onReportClickRef.current(r), true);
+
+    const renderHeatmap = () => {
+      if (mapInstance.current) {
+        setupMapLayers(mapInstance.current, filteredReports, r => onReportClickRef.current(r), true);
+      }
+    };
+
+    renderHeatmap();
+
+    mapInstance.current.once('style.load', renderHeatmap);
+    mapInstance.current.once('styledata', renderHeatmap);
+    mapInstance.current.once('idle', renderHeatmap);
   }, [filteredReports]);
 
   const toggle3DMode = () => {

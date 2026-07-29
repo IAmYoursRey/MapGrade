@@ -127,8 +127,8 @@ export const InteractiveMap: React.FC = () => {
     const map = new (maplibregl as any).Map({
       container: mapRef.current,
       style: initialStyle,
-      center: [112.7521, -7.2575],
-      zoom: 10,
+      center: [118.0, -2.5],
+      zoom: 4.8,
       pitch: 0,
       projection: { type: 'mercator' },
       antialias: true,
@@ -159,6 +159,12 @@ export const InteractiveMap: React.FC = () => {
       resizeObserver.observe(mapRef.current);
     }
 
+    setTimeout(() => {
+      try {
+        map.resize();
+      } catch (_) {}
+    }, 150);
+
     mapInstance.current = map;
 
     return () => {
@@ -172,7 +178,7 @@ export const InteractiveMap: React.FC = () => {
     if (!mapInstance.current) return;
     const targetStyle = MAP_STYLES[activeLayer]?.style || MAP_STYLES.dark.style;
 
-    const reapplyLayers = () => {
+    const renderLayers = () => {
       if (mapInstance.current) {
         setupMapLayers(mapInstance.current, reports, (r) => onReportClickRef.current(r), false);
       }
@@ -180,12 +186,11 @@ export const InteractiveMap: React.FC = () => {
 
     mapInstance.current.setStyle(targetStyle);
 
-    if (mapInstance.current.isStyleLoaded()) {
-      reapplyLayers();
-    } else {
-      mapInstance.current.once('style.load', reapplyLayers);
-      mapInstance.current.once('styledata', reapplyLayers);
-    }
+    renderLayers();
+
+    mapInstance.current.once('style.load', renderLayers);
+    mapInstance.current.once('styledata', renderLayers);
+    mapInstance.current.once('idle', renderLayers);
   }, [activeLayer, reports]);
 
   const toggle3DMode = () => {
@@ -205,8 +210,8 @@ export const InteractiveMap: React.FC = () => {
   };
 
   return (
-    <section className="relative w-full h-full overflow-hidden">
-      <div ref={mapRef} className="absolute inset-0 w-full h-full z-0 bg-slate-950" />
+    <section className="relative w-full h-full min-h-[500px] overflow-hidden">
+      <div ref={mapRef} className="absolute inset-0 w-full h-full min-h-[500px] z-0 bg-slate-950" />
 
       {canMarkMap && (
         <aside className="absolute top-3 left-3 sm:top-6 sm:left-6 z-[1000] flex items-center gap-2 max-w-[calc(100vw-120px)] sm:max-w-md">

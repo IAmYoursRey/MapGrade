@@ -34,55 +34,55 @@ export const MainLayout: React.FC = () => {
   return (
     <div className={`min-h-screen flex flex-col ${isDarkMode ? 'bg-slate-900 text-slate-100' : 'bg-slate-50 text-slate-800'}`}>
       <header className="sticky top-0 z-[999] backdrop-blur-md bg-opacity-80 border-b border-slate-700/50 px-4 lg:px-8 py-3 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-2 group">
-          <figure className="w-10 h-10 rounded-xl bg-red-600 flex items-center justify-between p-2 shadow-lg shadow-red-600/30 group-hover:scale-105 transition-transform">
+        <Link to="/" className="flex items-center gap-2 group shrink-0">
+          <figure className="w-10 h-10 rounded-xl bg-red-600 flex items-center justify-center p-2 shadow-lg shadow-red-600/30 group-hover:scale-105 transition-transform shrink-0">
             <ShieldAlert className="w-full h-full text-white" />
           </figure>
-          <hgroup>
-            <span className="text-xl font-extrabold tracking-tight bg-gradient-to-r from-red-500 via-white to-blue-500 bg-clip-text text-transparent">
+          <hgroup className="min-w-0">
+            <span className="text-xl font-extrabold tracking-tight bg-gradient-to-r from-red-500 via-white to-blue-500 bg-clip-text text-transparent block">
               GoSiaga
             </span>
-            <span className="block text-[10px] text-slate-400 font-medium">Satu Laporan, Selamatkan Banyak Nyawa</span>
+            <span className="block text-[10px] text-slate-400 font-medium whitespace-nowrap">Satu Laporan, Selamatkan Banyak Nyawa</span>
           </hgroup>
         </Link>
 
-        <nav className="hidden md:flex items-center gap-6 text-sm font-semibold">
-          <Link to="/" className="hover:text-red-500 transition-colors">Beranda</Link>
-          <Link to="/map" className="flex items-center gap-1 hover:text-red-500 transition-colors">
-            <MapPin className="w-4 h-4 text-red-500" />
-            Peta Interaktif
+        <nav className="hidden md:flex items-center gap-4 lg:gap-6 text-sm font-semibold whitespace-nowrap shrink-0 flex-nowrap">
+          <Link to="/" className="hover:text-red-500 transition-colors whitespace-nowrap shrink-0">Beranda</Link>
+          <Link to="/map" className="flex items-center gap-1.5 hover:text-red-500 transition-colors whitespace-nowrap shrink-0">
+            <MapPin className="w-4 h-4 text-red-500 shrink-0" />
+            <span>Peta Interaktif</span>
           </Link>
-          <Link to="/analytics/heatmap" className="hover:text-red-500 transition-colors">Heatmap Bencana</Link>
+          <Link to="/analytics/heatmap" className="hover:text-red-500 transition-colors whitespace-nowrap shrink-0">Heatmap Bencana</Link>
           {isOfficerOrAdmin && (
-            <Link to="/dashboard/bpbd" className="flex items-center gap-1 text-amber-400 hover:text-amber-300 transition-colors font-bold">
-              <Shield className="w-4 h-4" />
-              Command Center
+            <Link to="/dashboard/bpbd" className="flex items-center gap-1.5 text-amber-400 hover:text-amber-300 transition-colors font-bold whitespace-nowrap shrink-0">
+              <Shield className="w-4 h-4 shrink-0" />
+              <span>Command Center</span>
             </Link>
           )}
           {isDev && (
-            <Link to="/dashboard/admin" className="flex items-center gap-1 text-purple-400 hover:text-purple-300 transition-colors font-bold">
-              <Users className="w-4 h-4" />
-              Manajemen User (Dev)
+            <Link to="/dashboard/admin" className="flex items-center gap-1.5 text-purple-400 hover:text-purple-300 transition-colors font-bold whitespace-nowrap shrink-0">
+              <Users className="w-4 h-4 shrink-0" />
+              <span>Manajemen User (Dev)</span>
             </Link>
           )}
-          <Link to="/docs" className="hover:text-red-500 transition-colors">Dokumentasi</Link>
+          <Link to="/docs" className="hover:text-red-500 transition-colors whitespace-nowrap shrink-0">Dokumentasi</Link>
         </nav>
 
-        <section className="flex items-center gap-2 md:gap-3">
+        <section className="flex items-center gap-2 md:gap-3 shrink-0">
           <button
             onClick={toggleTheme}
-            className="p-2 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 transition-colors"
+            className="p-2 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 transition-colors shrink-0"
             title="Toggle Dark/Light Mode"
           >
             {isDarkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
           </button>
           
           {user ? (
-            <div className="hidden md:flex items-center gap-2">
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-800 border border-slate-700">
-                <UserIcon className="w-4 h-4 text-red-400" />
-                <span className="text-xs font-bold text-slate-200">{user.name}</span>
-                <span className="px-1.5 py-0.5 text-[9px] font-extrabold uppercase bg-red-500/20 text-red-400 rounded-md border border-red-500/30">
+            <div className="hidden md:flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-800 border border-slate-700 shrink-0">
+                <UserIcon className="w-4 h-4 text-red-400 shrink-0" />
+                <span className="text-xs font-bold text-slate-200 whitespace-nowrap">{user.name}</span>
+                <span className="px-1.5 py-0.5 text-[9px] font-extrabold uppercase bg-red-500/20 text-red-400 rounded-md border border-red-500/30 whitespace-nowrap">
                   {isDev ? 'Dev Utama' : user.role}
                 </span>
                 <button
@@ -96,7 +96,7 @@ export const MainLayout: React.FC = () => {
 
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white text-xs font-bold transition-all border border-red-600/40"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white text-xs font-bold transition-all border border-red-600/40 whitespace-nowrap shrink-0"
                 title="Keluar Akun"
               >
                 <LogOut className="w-3.5 h-3.5" />
@@ -106,7 +106,7 @@ export const MainLayout: React.FC = () => {
           ) : (
             <Link
               to="/auth/login"
-              className="hidden md:flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold text-sm shadow-md shadow-red-600/20 transition-all hover:scale-105"
+              className="hidden md:flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold text-sm shadow-md shadow-red-600/20 transition-all hover:scale-105 whitespace-nowrap shrink-0"
             >
               <UserIcon className="w-4 h-4" />
               Masuk
@@ -223,7 +223,7 @@ export const MainLayout: React.FC = () => {
         </aside>
       )}
 
-      <main className="flex-1 relative z-0">
+      <main className="flex-1 relative z-0 flex flex-col">
         <Outlet />
       </main>
 

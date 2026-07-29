@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useMapStore, ReportStatus, Report } from '@/store/useMapStore';
 import { StatusBadge } from '@/components/common/StatusBadge';
 import { ReportDrawer } from '@/features/report/ReportDrawer';
+import { ReportFormModal } from '@/features/report/ReportFormModal';
 import {
   AlertTriangle,
   Clock,
@@ -469,6 +470,8 @@ export const BpbdDashboard: React.FC = () => {
           </table>
         </div>
       </section>
+      
+      <ReportFormModal />
       <ReportDrawer />
     </main>
   );

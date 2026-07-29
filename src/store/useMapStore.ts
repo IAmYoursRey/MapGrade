@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { formatIndonesiaTimestamp } from '@/utils/dateUtils';
+import { DEFAULT_SEED_REPORTS } from '@/data/seedReports';
 
 export type ReportStatus = 'UNVERIFIED' | 'NEEDS_REVIEW' | 'IN_PROGRESS' | 'RESOLVED' | 'ARCHIVED';
 export type MapLayerType = 'dark' | 'streets' | 'satellite';
@@ -104,74 +105,21 @@ export interface MapStore {
 const REPORTS_STORAGE_KEY = 'gosiaga_reports_data';
 const ARCHIVED_STORAGE_KEY = 'gosiaga_archived_reports_data';
 
-const DEFAULT_SEED_REPORTS: Report[] = [
-  {
-    id: 'report-seed-1',
-    title: 'Banjir Bandang Luapan Sungai Citarum',
-    category: 'BANJIR',
-    description: 'Genangan air setinggi 80 cm meluap ke pemukiman warga akibat curah hujan tinggi sejak dini hari.',
-    latitude: -6.9175,
-    longitude: 107.6191,
-    status: 'IN_PROGRESS',
-    createdAt: formatIndonesiaTimestamp(Date.now() - 3600000 * 5),
-    photos: ['https://images.unsplash.com/photo-1547683905-f686c993aae5?auto=format&fit=crop&q=80&w=800'],
-    casualties: 120,
-    damage: '45 Rumah Terendam Air',
-    contactPhone: '081234567890',
-    upvotes: 24,
-    validationsCount: 18,
-    invalidationsCount: 1,
-    commentsCount: 3,
-    aiSummary: 'Banjir berada di tingkat bahaya sedang. Tim BPBD telah menerjunkan perahu karet di sektor 3.'
-  },
-  {
-    id: 'report-seed-2',
-    title: 'Tanah Longsor Jalur Perbukitan Surabaya-Malang',
-    category: 'LONGSOR',
-    description: 'Material tebing menutup badan jalan utama, mengakibatkan arus lalu lintas lumpuh total.',
-    latitude: -7.2575,
-    longitude: 112.7521,
-    status: 'UNVERIFIED',
-    createdAt: formatIndonesiaTimestamp(Date.now() - 3600000 * 2),
-    photos: ['https://images.unsplash.com/photo-1547683905-f686c993aae5?auto=format&fit=crop&q=80&w=800'],
-    casualties: 0,
-    damage: 'Akses Jalan Utama Terputus',
-    contactPhone: '081515876022',
-    upvotes: 12,
-    validationsCount: 9,
-    invalidationsCount: 0,
-    commentsCount: 2,
-    aiSummary: 'Perlu pembersihan material menggunakan alat berat. Jalur dialihkan sementara.'
-  },
-  {
-    id: 'report-seed-3',
-    title: 'Kebakaran Lahan Hutan Pinus',
-    category: 'KEBAKARAN',
-    description: 'Asap tebal mengepul dari area hutan akibat suhu udara panas dan tiupan angin kencang.',
-    latitude: -7.7956,
-    longitude: 110.3695,
-    status: 'NEEDS_REVIEW',
-    createdAt: formatIndonesiaTimestamp(Date.now() - 3600000 * 8),
-    photos: ['https://images.unsplash.com/photo-1547683905-f686c993aae5?auto=format&fit=crop&q=80&w=800'],
-    casualties: 5,
-    damage: '2 Hektar Lahan Terbakar',
-    contactPhone: '081999888777',
-    upvotes: 30,
-    validationsCount: 25,
-    invalidationsCount: 2,
-    commentsCount: 4,
-    aiSummary: 'Tim Pemadam Kebakaran sedang berupaya melokalisir titik api agar tidak mendekati area pemukiman.'
-  }
-];
-
 const getInitialReports = (): Report[] => {
   try {
     const stored = localStorage.getItem(REPORTS_STORAGE_KEY);
     if (stored) {
       const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
     }
   } catch {}
+
+  try {
+    localStorage.setItem(REPORTS_STORAGE_KEY, JSON.stringify(DEFAULT_SEED_REPORTS));
+  } catch {}
+
   return DEFAULT_SEED_REPORTS;
 };
 
@@ -277,7 +225,7 @@ export const useMapStore = create<MapStore>((set, get) => {
                 title: 'Laporan Diarsipkan / Dihapus dari Peta',
                 time: formatIndonesiaTimestamp(),
                 status: 'ARCHIVED',
-                description: 'Laporan telah diselesaikan/dihapus dan disimpan dalam arsip terpisah.'
+                description: 'Laporan telah diselesaikan/dihapus dan disimpan dalam arsip riwayat.'
               }
             ]
           };
@@ -483,7 +431,7 @@ export const useMapStore = create<MapStore>((set, get) => {
     importReportsJSON: (jsonStr: string) => {
       try {
         const parsed = JSON.parse(jsonStr);
-        if (Array.isArray(parsed)) {
+        if (Array.isArray(parsed) && parsed.length > 0) {
           set({ reports: parsed });
           saveReportsToStorage(parsed);
           alert(`Berhasil mengimpor ${parsed.length} data laporan bencana ke Vercel/Browser!`);
