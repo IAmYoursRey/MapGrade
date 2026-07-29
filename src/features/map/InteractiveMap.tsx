@@ -26,13 +26,7 @@ const MAP_STYLES: Record<string, { style: any; label: string }> = {
         }
       },
       layers: [
-        {
-          id: 'carto-dark-layer',
-          type: 'raster',
-          source: 'carto-dark',
-          minzoom: 0,
-          maxzoom: 19
-        }
+        { id: 'carto-dark-layer', type: 'raster', source: 'carto-dark', minzoom: 0, maxzoom: 19 }
       ]
     }
   },
@@ -49,13 +43,7 @@ const MAP_STYLES: Record<string, { style: any; label: string }> = {
         }
       },
       layers: [
-        {
-          id: 'osm-layer',
-          type: 'raster',
-          source: 'osm-tiles',
-          minzoom: 0,
-          maxzoom: 19
-        }
+        { id: 'osm-layer', type: 'raster', source: 'osm-tiles', minzoom: 0, maxzoom: 19 }
       ]
     }
   },
@@ -77,13 +65,7 @@ const MAP_STYLES: Record<string, { style: any; label: string }> = {
         }
       },
       layers: [
-        {
-          id: 'carto-light-layer',
-          type: 'raster',
-          source: 'carto-light',
-          minzoom: 0,
-          maxzoom: 19
-        }
+        { id: 'carto-light-layer', type: 'raster', source: 'carto-light', minzoom: 0, maxzoom: 19 }
       ]
     }
   }
@@ -93,6 +75,7 @@ export const InteractiveMap: React.FC = () => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<maplibregl.Map | null>(null);
   const prevLayerRef = useRef<string | null>(null);
+  const layerSetupId = useRef(0);
 
   const { user } = useAuthStore();
   const canMarkMap = hasMapMarkPermission(user);
@@ -121,6 +104,13 @@ export const InteractiveMap: React.FC = () => {
     };
   }, [setSelectedReport, setIsDrawerOpen]);
 
+  const applyMarkers = async (map: maplibregl.Map) => {
+    const id = ++layerSetupId.current;
+    const currentReports = useMapStore.getState().reports || [];
+    await setupMapLayers(map, currentReports, (r) => onReportClickRef.current(r), false);
+    if (layerSetupId.current !== id) return;
+  };
+
   useEffect(() => {
     if (!mapRef.current || mapInstance.current) return;
 
@@ -143,21 +133,13 @@ export const InteractiveMap: React.FC = () => {
     map.addControl(new maplibregl.NavigationControl({ showCompass: true, showZoom: true, visualizePitch: true }), 'bottom-right');
     map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
 
-    const handleInitialLoad = () => {
-      const currentReports = useMapStore.getState().reports || [];
-      setupMapLayers(map, currentReports, (r) => onReportClickRef.current(r), false);
-    };
+    mapInstance.current = map;
 
-    map.on('load', handleInitialLoad);
-    map.on('style.load', handleInitialLoad);
-    map.on('styledata', handleInitialLoad);
-    map.on('idle', handleInitialLoad);
-    handleInitialLoad();
+    applyMarkers(map);
 
     map.on('click', (e) => {
       const currentUser = useAuthStore.getState().user;
       const authorized = hasMapMarkPermission(currentUser);
-
       if (authorized) {
         setManualCoords({ lat: e.lngLat.lat, lng: e.lngLat.lng });
         setIsFormOpen(true);
@@ -165,22 +147,11 @@ export const InteractiveMap: React.FC = () => {
     });
 
     const resizeObserver = new ResizeObserver(() => {
-      if (mapInstance.current) {
-        mapInstance.current.resize();
-      }
+      mapInstance.current?.resize();
     });
+    if (mapRef.current) resizeObserver.observe(mapRef.current);
 
-    if (mapRef.current) {
-      resizeObserver.observe(mapRef.current);
-    }
-
-    setTimeout(() => {
-      try {
-        map.resize();
-      } catch (_) {}
-    }, 150);
-
-    mapInstance.current = map;
+    setTimeout(() => { try { map.resize(); } catch (_) {} }, 150);
 
     return () => {
       resizeObserver.disconnect();
@@ -192,31 +163,31 @@ export const InteractiveMap: React.FC = () => {
   useEffect(() => {
     if (!mapInstance.current) return;
     if (prevLayerRef.current === activeLayer) return;
-
     prevLayerRef.current = activeLayer;
+
     const targetStyle = MAP_STYLES[activeLayer]?.style || MAP_STYLES.dark.style;
-
-    const onStyleLoad = () => {
-      if (mapInstance.current) {
-        setupMapLayers(mapInstance.current, reports, (r) => onReportClickRef.current(r), false);
-      }
-    };
-
     mapInstance.current.setStyle(targetStyle);
-    onStyleLoad();
-    mapInstance.current.on('style.load', onStyleLoad);
+
+    const map = mapInstance.current;
+    const doSetup = async () => {
+      await setupMapLayers(map, reports, (r) => onReportClickRef.current(r), false);
+    };
+    doSetup();
   }, [activeLayer]);
 
   useEffect(() => {
     if (!mapInstance.current) return;
-    setupMapLayers(mapInstance.current, reports, (r) => onReportClickRef.current(r), false);
+    const map = mapInstance.current;
+    const doSetup = async () => {
+      await setupMapLayers(map, reports, (r) => onReportClickRef.current(r), false);
+    };
+    doSetup();
   }, [reports]);
 
   const toggle3DMode = () => {
     if (!mapInstance.current) return;
     const nextState = !is3DMode;
     setIs3DMode(nextState);
-
     try {
       if (nextState) {
         (mapInstance.current as any).setProjection({ type: 'globe' });

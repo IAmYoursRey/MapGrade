@@ -29,13 +29,7 @@ const DARK_MAP_STYLE: any = {
     }
   },
   layers: [
-    {
-      id: 'carto-dark-layer',
-      type: 'raster',
-      source: 'carto-dark',
-      minzoom: 0,
-      maxzoom: 19
-    }
+    { id: 'carto-dark-layer', type: 'raster', source: 'carto-dark', minzoom: 0, maxzoom: 19 }
   ]
 };
 
@@ -130,28 +124,19 @@ export const AnalyticsPage: React.FC = () => {
     map.addControl(new maplibregl.NavigationControl({ showCompass: true, showZoom: true, visualizePitch: true }), 'top-right');
     map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
 
-    const handleInitialLoad = () => {
-      const currentReports = useMapStore.getState().reports || [];
-      setupMapLayers(map, currentReports, r => onReportClickRef.current(r), true);
-    };
+    mapInstance.current = map;
 
-    map.on('load', handleInitialLoad);
-    map.on('style.load', handleInitialLoad);
-    map.on('styledata', handleInitialLoad);
-    map.on('idle', handleInitialLoad);
-    handleInitialLoad();
+    const doSetup = async () => {
+      const currentReports = useMapStore.getState().reports || [];
+      await setupMapLayers(map, currentReports, r => onReportClickRef.current(r), true);
+    };
+    doSetup();
 
     const resizeObserver = new ResizeObserver(() => {
-      if (mapInstance.current) {
-        mapInstance.current.resize();
-      }
+      mapInstance.current?.resize();
     });
+    if (mapRef.current) resizeObserver.observe(mapRef.current);
 
-    if (mapRef.current) {
-      resizeObserver.observe(mapRef.current);
-    }
-
-    mapInstance.current = map;
     return () => {
       resizeObserver.disconnect();
       mapInstance.current?.remove();
@@ -168,14 +153,17 @@ export const AnalyticsPage: React.FC = () => {
 
   useEffect(() => {
     if (!mapInstance.current) return;
-    setupMapLayers(mapInstance.current, filteredReports, r => onReportClickRef.current(r), true);
+    const map = mapInstance.current;
+    const doSetup = async () => {
+      await setupMapLayers(map, filteredReports, r => onReportClickRef.current(r), true);
+    };
+    doSetup();
   }, [filteredReports]);
 
   const toggle3DMode = () => {
     if (!mapInstance.current) return;
     const nextState = !is3DMode;
     setIs3DMode(nextState);
-
     try {
       if (nextState) {
         (mapInstance.current as any).setProjection({ type: 'globe' });
