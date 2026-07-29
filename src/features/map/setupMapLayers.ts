@@ -66,13 +66,22 @@ export const setupMapLayers = (
   onReportClick?: (report: Report) => void,
   isHeatmapMode = false
 ) => {
+  console.log('[LOG 12] reports.length:', reports?.length || 0);
+
   const geojson = buildGeoJSON(reports);
+  console.log('[LOG 13] FeatureCollection:', geojson);
+  console.log('[LOG 14] features.length:', geojson.features?.length || 0);
 
   const applyLayers = () => {
     try {
-      if (map.getSource(SOURCE_ID)) {
+      const sourceExists = !!map.getSource(SOURCE_ID);
+      console.log('[LOG 15] Source exists:', sourceExists);
+
+      if (sourceExists) {
+        console.log('[LOG 11] Updating GeoJSON via setData()');
         (map.getSource(SOURCE_ID) as maplibregl.GeoJSONSource).setData(geojson);
       } else {
+        console.log('[LOG 7] BEFORE addSource()', SOURCE_ID);
         map.addSource(SOURCE_ID, {
           type: 'geojson',
           data: geojson,
@@ -80,10 +89,13 @@ export const setupMapLayers = (
           clusterMaxZoom: 12,
           clusterRadius: 50
         });
+        console.log('[LOG 8] AFTER addSource()', SOURCE_ID);
       }
 
       if (isHeatmapMode) {
+        console.log('[LOG 16] Layer exists: gosiaga-heatmap-layer', !!map.getLayer('gosiaga-heatmap-layer'));
         if (!map.getLayer('gosiaga-heatmap-layer')) {
+          console.log('[LOG 9] BEFORE addLayer() gosiaga-heatmap-layer');
           map.addLayer({
             id: 'gosiaga-heatmap-layer',
             type: 'heatmap',
@@ -128,13 +140,16 @@ export const setupMapLayers = (
               'heatmap-opacity': 0.85
             }
           });
+          console.log('[LOG 10] AFTER addLayer() gosiaga-heatmap-layer');
         }
       } else {
         if (map.getLayer('gosiaga-heatmap-layer')) {
           map.removeLayer('gosiaga-heatmap-layer');
         }
 
+        console.log('[LOG 16] Layer exists: clusters-glow', !!map.getLayer('clusters-glow'));
         if (!map.getLayer('clusters-glow')) {
+          console.log('[LOG 9] BEFORE addLayer() clusters-glow');
           map.addLayer({
             id: 'clusters-glow',
             type: 'circle',
@@ -147,9 +162,12 @@ export const setupMapLayers = (
               'circle-blur': 0.8
             }
           });
+          console.log('[LOG 10] AFTER addLayer() clusters-glow');
         }
 
+        console.log('[LOG 16] Layer exists: clusters-core', !!map.getLayer('clusters-core'));
         if (!map.getLayer('clusters-core')) {
+          console.log('[LOG 9] BEFORE addLayer() clusters-core');
           map.addLayer({
             id: 'clusters-core',
             type: 'circle',
@@ -162,9 +180,12 @@ export const setupMapLayers = (
               'circle-stroke-color': '#ffffff'
             }
           });
+          console.log('[LOG 10] AFTER addLayer() clusters-core');
         }
 
+        console.log('[LOG 16] Layer exists: cluster-count', !!map.getLayer('cluster-count'));
         if (!map.getLayer('cluster-count')) {
+          console.log('[LOG 9] BEFORE addLayer() cluster-count');
           map.addLayer({
             id: 'cluster-count',
             type: 'symbol',
@@ -182,9 +203,12 @@ export const setupMapLayers = (
               'text-halo-width': 1.5
             }
           });
+          console.log('[LOG 10] AFTER addLayer() cluster-count');
         }
 
+        console.log('[LOG 16] Layer exists: unclustered-glow', !!map.getLayer('unclustered-glow'));
         if (!map.getLayer('unclustered-glow')) {
+          console.log('[LOG 9] BEFORE addLayer() unclustered-glow');
           map.addLayer({
             id: 'unclustered-glow',
             type: 'circle',
@@ -205,9 +229,12 @@ export const setupMapLayers = (
               'circle-blur': 0.6
             }
           });
+          console.log('[LOG 10] AFTER addLayer() unclustered-glow');
         }
 
+        console.log('[LOG 16] Layer exists: unclustered-point', !!map.getLayer('unclustered-point'));
         if (!map.getLayer('unclustered-point')) {
+          console.log('[LOG 9] BEFORE addLayer() unclustered-point');
           map.addLayer({
             id: 'unclustered-point',
             type: 'circle',
@@ -228,9 +255,12 @@ export const setupMapLayers = (
               'circle-stroke-color': '#ffffff'
             }
           });
+          console.log('[LOG 10] AFTER addLayer() unclustered-point');
         }
 
+        console.log('[LOG 16] Layer exists: unclustered-label', !!map.getLayer('unclustered-label'));
         if (!map.getLayer('unclustered-label')) {
+          console.log('[LOG 9] BEFORE addLayer() unclustered-label');
           map.addLayer({
             id: 'unclustered-label',
             type: 'symbol',
@@ -251,9 +281,12 @@ export const setupMapLayers = (
               'text-halo-width': 2
             }
           });
+          console.log('[LOG 10] AFTER addLayer() unclustered-label');
         }
       }
-    } catch (_) {}
+    } catch (err) {
+      console.error('[LOG ERROR] applyLayers failed:', err);
+    }
   };
 
   applyLayers();
