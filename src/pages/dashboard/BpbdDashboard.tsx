@@ -22,7 +22,9 @@ import {
   AlertCircle,
   Trash2,
   MapPin,
-  Plus
+  Plus,
+  Download,
+  Upload
 } from 'lucide-react';
 
 export const BpbdDashboard: React.FC = () => {
@@ -36,6 +38,8 @@ export const BpbdDashboard: React.FC = () => {
     setSelectedReportId,
     setIsDrawerOpen,
     setIsFormOpen,
+    exportReportsJSON,
+    importReportsJSON
   } = useMapStore();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -102,6 +106,18 @@ export const BpbdDashboard: React.FC = () => {
     setIsFormOpen(true);
   };
 
+  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      if (event.target?.result) {
+        importReportsJSON(event.target.result as string);
+      }
+    };
+    reader.readAsText(file);
+  };
+
   const handleResetFilters = () => {
     setSearchTerm('');
     setSelectedCategory('ALL');
@@ -138,23 +154,44 @@ export const BpbdDashboard: React.FC = () => {
           </div>
         </div>
 
-        <nav className="flex items-center gap-3 self-end md:self-auto shrink-0">
+        <nav className="flex flex-wrap items-center gap-2 self-end md:self-auto shrink-0">
           <button
             type="button"
             onClick={handleCreateManualReport}
-            className="flex items-center gap-2 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-xl shadow-lg shadow-red-600/30 transition-all cursor-pointer active:scale-95"
+            className="flex items-center gap-2 px-3.5 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl shadow-lg shadow-red-600/30 transition-all cursor-pointer active:scale-95"
           >
             <Plus className="w-4 h-4" />
             <span>Tandai Bencana Baru</span>
           </button>
+
+          <button
+            type="button"
+            onClick={exportReportsJSON}
+            className="flex items-center gap-1.5 px-3 py-2.5 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-400 text-xs font-bold rounded-xl border border-blue-200 dark:border-blue-800 transition-all cursor-pointer"
+            title="Ekspor Backup Data Bencana ke JSON"
+          >
+            <Download className="w-4 h-4" />
+            <span className="hidden sm:inline">Ekspor JSON</span>
+          </button>
+
+          <label
+            className="flex items-center gap-1.5 px-3 py-2.5 bg-amber-50 dark:bg-amber-900/30 hover:bg-amber-100 dark:hover:bg-amber-900/50 text-amber-600 dark:text-amber-400 text-xs font-bold rounded-xl border border-amber-200 dark:border-amber-800 transition-all cursor-pointer"
+            title="Impor Backup JSON ke Vercel / Device Lain"
+          >
+            <Upload className="w-4 h-4" />
+            <span className="hidden sm:inline">Impor JSON</span>
+            <input type="file" accept=".json" onChange={handleImportFile} className="hidden" />
+          </label>
+
           <button
             type="button"
             onClick={() => navigate('/map')}
-            className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-sm font-bold rounded-xl border border-slate-200 dark:border-slate-600 transition-all cursor-pointer active:scale-95"
+            className="flex items-center gap-2 px-3 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-600 transition-all cursor-pointer active:scale-95"
           >
             <MapPin className="w-4 h-4 text-red-500" />
             <span className="hidden sm:inline">Peta Utama</span>
           </button>
+
           <button
             type="button"
             onClick={() => window.location.reload()}

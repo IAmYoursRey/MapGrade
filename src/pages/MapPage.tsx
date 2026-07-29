@@ -9,14 +9,16 @@ export const MapPage: React.FC = () => {
   const { setIsFormOpen } = useMapStore();
 
   return (
-    <section className="relative w-full h-[calc(100vh-64px)] overflow-hidden bg-slate-950">
-      <InteractiveMap />
+    <section className="relative w-full h-[calc(100dvh-64px)] md:h-[calc(100vh-64px)] overflow-hidden bg-slate-950 flex flex-col">
+      <div className="flex-1 w-full h-full relative">
+        <InteractiveMap />
+      </div>
 
       <button
         onClick={() => setIsFormOpen(true)}
-        className="fixed bottom-8 right-8 z-[1500] px-6 py-4 bg-red-600 hover:bg-red-500 text-white rounded-full font-black text-sm shadow-2xl shadow-red-600/50 flex items-center gap-3 transition-all hover:scale-105 active:scale-95 border-2 border-white/20"
+        className="fixed bottom-6 right-6 sm:bottom-8 sm:right-8 z-[1500] px-5 py-3.5 sm:px-6 sm:py-4 bg-red-600 hover:bg-red-500 text-white rounded-full font-black text-xs sm:text-sm shadow-2xl shadow-red-600/50 flex items-center gap-2.5 transition-all hover:scale-105 active:scale-95 border-2 border-white/20"
       >
-        <Plus className="w-6 h-6 stroke-[3]" />
+        <Plus className="w-5 h-5 sm:w-6 sm:h-6 stroke-[3]" />
         <span>LAPOR BENCANA</span>
       </button>
 

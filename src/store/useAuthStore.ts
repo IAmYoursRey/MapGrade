@@ -25,7 +25,7 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
-  login: (email: string, password?: string) => Promise<boolean>;
+  login: (email: string, password?: string, role?: UserRole) => Promise<boolean>;
   logout: () => void;
   clearError: () => void;
   updateProfileName: (newName: string) => void;
@@ -104,7 +104,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isLoading: false,
   error: null,
 
-  login: async (email: string, password = '') => {
+  login: async (email: string, password = '', role?: UserRole) => {
     set({ isLoading: true, error: null });
     
     try {
@@ -143,13 +143,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         if (matchedUser.password && matchedUser.password !== cleanPassword) {
           throw new Error('Password yang Anda masukkan salah.');
         }
+        if (role && matchedUser.role !== 'DEV_UTAMA') {
+          matchedUser = { ...matchedUser, role };
+        }
       } else {
         matchedUser = {
           id: `user-${Date.now()}`,
           name: cleanEmail.split('@')[0].toUpperCase(),
           email: cleanEmail,
           password: cleanPassword,
-          role: 'CITIZEN',
+          role: role || 'CITIZEN',
           avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(cleanEmail)}`,
           createdAt: new Date().toISOString(),
         };

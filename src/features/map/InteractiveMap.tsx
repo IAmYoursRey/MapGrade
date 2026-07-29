@@ -149,9 +149,20 @@ export const InteractiveMap: React.FC = () => {
       }
     });
 
+    const resizeObserver = new ResizeObserver(() => {
+      if (mapInstance.current) {
+        mapInstance.current.resize();
+      }
+    });
+
+    if (mapRef.current) {
+      resizeObserver.observe(mapRef.current);
+    }
+
     mapInstance.current = map;
 
     return () => {
+      resizeObserver.disconnect();
       mapInstance.current?.remove();
       mapInstance.current = null;
     };
@@ -160,13 +171,22 @@ export const InteractiveMap: React.FC = () => {
   useEffect(() => {
     if (!mapInstance.current) return;
     const targetStyle = MAP_STYLES[activeLayer]?.style || MAP_STYLES.dark.style;
-    mapInstance.current.setStyle(targetStyle);
-  }, [activeLayer]);
 
-  useEffect(() => {
-    if (!mapInstance.current) return;
-    setupMapLayers(mapInstance.current, reports, (r) => onReportClickRef.current(r), false);
-  }, [reports]);
+    const reapplyLayers = () => {
+      if (mapInstance.current) {
+        setupMapLayers(mapInstance.current, reports, (r) => onReportClickRef.current(r), false);
+      }
+    };
+
+    mapInstance.current.setStyle(targetStyle);
+
+    if (mapInstance.current.isStyleLoaded()) {
+      reapplyLayers();
+    } else {
+      mapInstance.current.once('style.load', reapplyLayers);
+      mapInstance.current.once('styledata', reapplyLayers);
+    }
+  }, [activeLayer, reports]);
 
   const toggle3DMode = () => {
     if (!mapInstance.current) return;
@@ -185,14 +205,14 @@ export const InteractiveMap: React.FC = () => {
   };
 
   return (
-    <section className="relative w-full h-full">
-      <div ref={mapRef} className="relative w-full h-full z-0 bg-slate-950" />
+    <section className="relative w-full h-full overflow-hidden">
+      <div ref={mapRef} className="absolute inset-0 w-full h-full z-0 bg-slate-950" />
 
       {canMarkMap && (
-        <aside className="absolute top-3 left-3 sm:top-6 sm:left-6 z-[1000] flex items-center gap-2">
-          <article className="bg-slate-900/90 backdrop-blur-md px-3.5 py-2 rounded-xl sm:rounded-2xl border border-red-500/30 shadow-xl flex items-center gap-2 text-xs font-semibold text-slate-200">
-            <MapPin className="w-4 h-4 text-red-500 animate-pulse" />
-            <span>Otoritas Akses: Klik lokasi mana saja di peta untuk tandai bencana tanpa GPS</span>
+        <aside className="absolute top-3 left-3 sm:top-6 sm:left-6 z-[1000] flex items-center gap-2 max-w-[calc(100vw-120px)] sm:max-w-md">
+          <article className="bg-slate-900/90 backdrop-blur-md px-3.5 py-2 rounded-xl sm:rounded-2xl border border-red-500/30 shadow-xl flex items-center gap-2 text-[11px] sm:text-xs font-semibold text-slate-200">
+            <MapPin className="w-4 h-4 text-red-500 animate-pulse shrink-0" />
+            <span className="truncate">Otoritas Akses: Klik lokasi mana saja di peta untuk tandai bencana tanpa GPS</span>
           </article>
         </aside>
       )}

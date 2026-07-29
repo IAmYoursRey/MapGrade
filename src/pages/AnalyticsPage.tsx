@@ -128,8 +128,22 @@ export const AnalyticsPage: React.FC = () => {
     map.addControl(new maplibregl.NavigationControl({ showCompass: true, showZoom: true, visualizePitch: true }), 'top-right');
     map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
 
+    const resizeObserver = new ResizeObserver(() => {
+      if (mapInstance.current) {
+        mapInstance.current.resize();
+      }
+    });
+
+    if (mapRef.current) {
+      resizeObserver.observe(mapRef.current);
+    }
+
     mapInstance.current = map;
-    return () => { mapInstance.current?.remove(); mapInstance.current = null; };
+    return () => {
+      resizeObserver.disconnect();
+      mapInstance.current?.remove();
+      mapInstance.current = null;
+    };
   }, []);
 
   useEffect(() => {
@@ -220,7 +234,7 @@ export const AnalyticsPage: React.FC = () => {
         </nav>
       </header>
 
-      <section ref={mapRef} className="relative w-full h-full z-0" />
+      <section ref={mapRef} className="absolute inset-0 w-full h-full z-0" />
 
       {showStatsPanel && (
         <aside className="absolute top-[110px] sm:top-24 left-2 sm:left-4 z-20 w-[calc(100vw-16px)] sm:w-72 md:w-80 max-h-[calc(100dvh-140px)] overflow-y-auto space-y-3 p-3 sm:p-4 bg-slate-900/95 backdrop-blur-md rounded-2xl border border-slate-800 shadow-2xl scrollbar-thin scrollbar-thumb-slate-700">

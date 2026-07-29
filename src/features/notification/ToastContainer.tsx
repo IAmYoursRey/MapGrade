@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNotificationStore, ToastType } from '@/store/useNotificationStore';
+import { useNotificationStore, ToastType, ToastItem } from '@/store/useNotificationStore';
 import { AlertCircle, AlertTriangle, CheckCircle2, Info, X } from 'lucide-react';
 
 const toastConfig: Record<ToastType, { icon: React.ElementType; bg: string; border: string; text: string }> = {
@@ -14,8 +14,8 @@ export const ToastContainer: React.FC = () => {
 
   return (
     <div className="fixed top-4 right-4 z-[9999] flex flex-col gap-3 pointer-events-none w-full max-w-sm">
-      {toasts.map((toast) => {
-        const Config = toastConfig[toast.type];
+      {toasts.map((toast: ToastItem) => {
+        const Config = toastConfig[toast.type] || toastConfig.info;
         const Icon = Config.icon;
 
         return (

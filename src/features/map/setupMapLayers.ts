@@ -1,5 +1,5 @@
 import * as maplibregl from 'maplibre-gl';
-import { Report, ReportStatus } from '@/store/useMapStore';
+import { Report } from '@/store/useMapStore';
 
 const SOURCE_ID = 'gosiaga-reports-source';
 const LAYER_IDS = [
@@ -22,21 +22,42 @@ const CATEGORY_ICONS: Record<string, string> = {
   LAINNYA: '⚠️',
 };
 
+const normalizeCategoryKey = (cat?: string): string => {
+  if (!cat) return 'LAINNYA';
+  const clean = cat.toUpperCase().trim();
+  if (clean.includes('BANJIR')) return 'BANJIR';
+  if (clean.includes('LONGSOR')) return 'LONGSOR';
+  if (clean.includes('GEMPA')) return 'GEMPA';
+  if (clean.includes('KEBAKARAN')) return 'KEBAKARAN';
+  if (clean.includes('TSUNAMI')) return 'TSUNAMI';
+  if (clean.includes('ANGIN') || clean.includes('PUTING')) return 'ANGIN_PUTING_BELIUNG';
+  return 'LAINNYA';
+};
+
 const buildGeoJSON = (reports: Report[]): any => ({
   type: 'FeatureCollection',
-  features: reports.map((r) => ({
-    type: 'Feature',
-    geometry: { type: 'Point', coordinates: [r.longitude, r.latitude] },
-    properties: {
-      id: r.id,
-      title: r.title,
-      category: r.category,
-      status: r.status,
-      icon: CATEGORY_ICONS[r.category] || '⚠️',
-      validationsCount: r.validationsCount || 1,
-      reportData: JSON.stringify(r)
-    }
-  }))
+  features: (reports || []).map((r) => {
+    const lng = Number(r.longitude);
+    const lat = Number(r.latitude);
+    const validLng = !isNaN(lng) && lng !== 0 ? lng : 112.7521;
+    const validLat = !isNaN(lat) && lat !== 0 ? lat : -7.2575;
+
+    const catKey = normalizeCategoryKey(r.category);
+
+    return {
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [validLng, validLat] },
+      properties: {
+        id: r.id,
+        title: r.title || 'Laporan Bencana',
+        category: catKey,
+        status: r.status || 'UNVERIFIED',
+        icon: CATEGORY_ICONS[catKey] || '⚠️',
+        validationsCount: r.validationsCount || 1,
+        reportData: JSON.stringify(r)
+      }
+    };
+  })
 });
 
 export const setupMapLayers = (
@@ -194,7 +215,7 @@ export const setupMapLayers = (
             'RESOLVED',     '#10b981',
             '#ef4444'
           ],
-          'circle-radius': ['interpolate', ['linear'], ['zoom'], 0, 5, 8, 8, 16, 12],
+          'circle-radius': ['interpolate', ['linear'], ['zoom'], 0, 6, 8, 10, 16, 14],
           'circle-stroke-width': 2.5,
           'circle-stroke-color': '#ffffff'
         }
@@ -207,13 +228,14 @@ export const setupMapLayers = (
         type: 'symbol',
         source: SOURCE_ID,
         filter: isHeatmapMode ? undefined : ['!', ['has', 'point_count']],
-        minzoom: 5,
+        minzoom: 3,
         layout: {
           'text-field': ['concat', ['get', 'icon'], ' ', ['get', 'title']],
           'text-size': 11,
           'text-offset': [0, 1.4],
           'text-anchor': 'top',
-          'text-allow-overlap': false
+          'text-allow-overlap': true,
+          'text-ignore-placement': true
         },
         paint: {
           'text-color': '#ffffff',
@@ -249,22 +271,32 @@ export const setupMapLayers = (
     map.on('mouseleave', 'clusters-core', () => { map.getCanvas().style.cursor = ''; });
   }
 
-  try {
-    map.off('click', 'unclustered-point', () => {});
-  } catch (_) {}
-
-  map.on('click', 'unclustered-point', (e) => {
-    const features = map.queryRenderedFeatures(e.point, { layers: ['unclustered-point'] });
+  const handlePointClick = (e: maplibregl.MapMouseEvent & { features?: maplibregl.MapGeoJSONFeature[] }) => {
+    const features = map.queryRenderedFeatures(e.point, { layers: ['unclustered-point', 'unclustered-label', 'unclustered-glow'] });
     if (!features.length) return;
     try {
-      const report: Report = JSON.parse(features[0].properties.reportData);
+      const reportDataStr = features[0].properties.reportData;
+      if (!reportDataStr) return;
+      const report: Report = JSON.parse(reportDataStr);
       map.flyTo({ center: [report.longitude, report.latitude], zoom: 15, duration: 800 });
       onReportClick?.(report);
     } catch (_) {}
-  });
+  };
+
+  try {
+    map.off('click', 'unclustered-point', handlePointClick);
+    map.off('click', 'unclustered-label', handlePointClick);
+    map.off('click', 'unclustered-glow', handlePointClick);
+  } catch (_) {}
+
+  map.on('click', 'unclustered-point', handlePointClick);
+  map.on('click', 'unclustered-label', handlePointClick);
+  map.on('click', 'unclustered-glow', handlePointClick);
 
   map.on('mouseenter', 'unclustered-point', () => { map.getCanvas().style.cursor = 'pointer'; });
   map.on('mouseleave', 'unclustered-point', () => { map.getCanvas().style.cursor = ''; });
+  map.on('mouseenter', 'unclustered-label', () => { map.getCanvas().style.cursor = 'pointer'; });
+  map.on('mouseleave', 'unclustered-label', () => { map.getCanvas().style.cursor = ''; });
 };
 
 export const teardownMapLayers = (map: maplibregl.Map) => {
