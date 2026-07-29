@@ -81,9 +81,7 @@ export const setupMapLayers = (
         map.addSource(SOURCE_ID, {
           type: 'geojson',
           data: geojson,
-          cluster: !isHeatmapMode,
-          clusterMaxZoom: 12,
-          clusterRadius: 50
+          cluster: false
         });
       }
 
@@ -95,6 +93,12 @@ export const setupMapLayers = (
       };
 
       if (isHeatmapMode) {
+        LAYER_IDS.forEach((id) => {
+          if (id !== 'gosiaga-heatmap-layer' && map.getLayer(id)) {
+            map.removeLayer(id);
+          }
+        });
+
         addLayerToTop({
           id: 'gosiaga-heatmap-layer',
           type: 'heatmap',
@@ -112,17 +116,17 @@ export const setupMapLayers = (
               'interpolate',
               ['linear'],
               ['zoom'],
-              0, 0.6,
-              6, 1.2,
-              12, 2.2
+              0, 0.8,
+              6, 1.5,
+              12, 2.5
             ],
             'heatmap-color': [
               'interpolate',
               ['linear'],
               ['heatmap-density'],
               0, 'rgba(0,0,0,0)',
-              0.2, 'rgba(59, 130, 246, 0.75)',
-              0.4, 'rgba(245, 158, 11, 0.85)',
+              0.2, 'rgba(59, 130, 246, 0.85)',
+              0.4, 'rgba(245, 158, 11, 0.90)',
               0.7, 'rgba(239, 68, 68, 0.95)',
               1.0, 'rgba(255, 255, 255, 1)'
             ],
@@ -130,13 +134,13 @@ export const setupMapLayers = (
               'interpolate',
               ['exponential', 1.4],
               ['zoom'],
-              0, 3,
-              4, 7,
-              7, 15,
-              10, 26,
-              14, 45
+              0, 6,
+              4, 14,
+              7, 28,
+              10, 42,
+              14, 60
             ],
-            'heatmap-opacity': 0.85
+            'heatmap-opacity': 0.9
           }
         });
       } else {
@@ -145,54 +149,9 @@ export const setupMapLayers = (
         }
 
         addLayerToTop({
-          id: 'clusters-glow',
-          type: 'circle',
-          source: SOURCE_ID,
-          filter: ['has', 'point_count'],
-          paint: {
-            'circle-color': '#ef4444',
-            'circle-radius': ['step', ['get', 'point_count'], 20, 5, 26, 15, 34],
-            'circle-opacity': 0.4,
-            'circle-blur': 0.8
-          }
-        });
-
-        addLayerToTop({
-          id: 'clusters-core',
-          type: 'circle',
-          source: SOURCE_ID,
-          filter: ['has', 'point_count'],
-          paint: {
-            'circle-color': '#ef4444',
-            'circle-radius': ['step', ['get', 'point_count'], 14, 5, 18, 15, 24],
-            'circle-stroke-width': 2.5,
-            'circle-stroke-color': '#ffffff'
-          }
-        });
-
-        addLayerToTop({
-          id: 'cluster-count',
-          type: 'symbol',
-          source: SOURCE_ID,
-          filter: ['has', 'point_count'],
-          layout: {
-            'text-field': '{point_count_abbreviated}',
-            'text-size': 12,
-            'text-allow-overlap': true,
-            'text-ignore-placement': true
-          },
-          paint: {
-            'text-color': '#ffffff',
-            'text-halo-color': 'rgba(0,0,0,0.6)',
-            'text-halo-width': 1.5
-          }
-        });
-
-        addLayerToTop({
           id: 'unclustered-glow',
           type: 'circle',
           source: SOURCE_ID,
-          filter: ['!', ['has', 'point_count']],
           paint: {
             'circle-color': [
               'match',
@@ -203,8 +162,8 @@ export const setupMapLayers = (
               'RESOLVED',     '#10b981',
               '#ef4444'
             ],
-            'circle-radius': ['interpolate', ['linear'], ['zoom'], 0, 8, 8, 14, 16, 20],
-            'circle-opacity': 0.4,
+            'circle-radius': ['interpolate', ['linear'], ['zoom'], 0, 10, 8, 16, 16, 22],
+            'circle-opacity': 0.45,
             'circle-blur': 0.6
           }
         });
@@ -213,7 +172,6 @@ export const setupMapLayers = (
           id: 'unclustered-point',
           type: 'circle',
           source: SOURCE_ID,
-          filter: ['!', ['has', 'point_count']],
           paint: {
             'circle-color': [
               'match',
@@ -224,7 +182,7 @@ export const setupMapLayers = (
               'RESOLVED',     '#10b981',
               '#ef4444'
             ],
-            'circle-radius': ['interpolate', ['linear'], ['zoom'], 0, 6, 8, 10, 16, 14],
+            'circle-radius': ['interpolate', ['linear'], ['zoom'], 0, 7, 8, 11, 16, 15],
             'circle-stroke-width': 2.5,
             'circle-stroke-color': '#ffffff'
           }
@@ -234,7 +192,6 @@ export const setupMapLayers = (
           id: 'unclustered-label',
           type: 'symbol',
           source: SOURCE_ID,
-          filter: ['!', ['has', 'point_count']],
           layout: {
             'text-field': ['concat', ['get', 'icon'], ' ', ['get', 'title']],
             'text-size': 12,
@@ -256,25 +213,6 @@ export const setupMapLayers = (
   };
 
   applyLayers();
-
-  if (!isHeatmapMode) {
-    try {
-      map.off('click', 'clusters-core', () => {});
-    } catch (_) {}
-    map.on('click', 'clusters-core', async (e) => {
-      const features = map.queryRenderedFeatures(e.point, { layers: ['clusters-core'] });
-      if (!features.length) return;
-      const clusterId = features[0].properties.cluster_id as number;
-      const source = map.getSource(SOURCE_ID) as maplibregl.GeoJSONSource;
-      try {
-        const zoom = await source.getClusterExpansionZoom(clusterId);
-        map.easeTo({ center: (features[0].geometry as any).coordinates, zoom });
-      } catch (_) {}
-    });
-
-    map.on('mouseenter', 'clusters-core', () => { map.getCanvas().style.cursor = 'pointer'; });
-    map.on('mouseleave', 'clusters-core', () => { map.getCanvas().style.cursor = ''; });
-  }
 
   const handlePointClick = (e: maplibregl.MapMouseEvent & { features?: maplibregl.MapGeoJSONFeature[] }) => {
     const features = map.queryRenderedFeatures(e.point, { layers: ['unclustered-point', 'unclustered-label', 'unclustered-glow'] });
