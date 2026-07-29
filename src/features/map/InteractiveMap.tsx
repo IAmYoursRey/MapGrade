@@ -12,6 +12,7 @@ const MAP_STYLES: Record<string, { style: any; label: string }> = {
     label: '🌙 Mode Gelap',
     style: {
       version: 8,
+      glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
       sources: {
         'carto-dark': {
           type: 'raster',
@@ -40,6 +41,7 @@ const MAP_STYLES: Record<string, { style: any; label: string }> = {
     label: '🗺️ Mode Jalan',
     style: {
       version: 8,
+      glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
       sources: {
         'osm-tiles': {
           type: 'raster',
@@ -63,6 +65,7 @@ const MAP_STYLES: Record<string, { style: any; label: string }> = {
     label: '🛰️ Mode Terang',
     style: {
       version: 8,
+      glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
       sources: {
         'carto-light': {
           type: 'raster',
