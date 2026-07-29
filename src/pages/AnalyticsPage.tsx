@@ -13,31 +13,7 @@ import {
   ChevronRight, Filter, Globe
 } from 'lucide-react';
 
-const DARK_MAP_STYLE: any = {
-  version: 8,
-  sources: {
-    'carto-dark': {
-      type: 'raster',
-      tiles: [
-        'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
-        'https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
-        'https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
-        'https://d.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'
-      ],
-      tileSize: 256,
-      attribution: '&copy; OpenStreetMap &copy; CARTO'
-    }
-  },
-  layers: [
-    {
-      id: 'carto-dark-layer',
-      type: 'raster',
-      source: 'carto-dark',
-      minzoom: 0,
-      maxzoom: 19
-    }
-  ]
-};
+const DARK_MAP_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
 
 const STATUS_CONFIG: Record<ReportStatus, { label: string; color: string; bg: string; border: string; icon: React.ReactNode }> = {
   UNVERIFIED:   { label: 'Belum Terverifikasi', color: 'text-red-400',     bg: 'bg-red-950/40',     border: 'border-red-800/50',     icon: <XCircle className="w-3.5 h-3.5" /> },
@@ -164,11 +140,11 @@ export const AnalyticsPage: React.FC = () => {
       }
     };
 
-    renderHeatmap();
-
-    mapInstance.current.once('style.load', renderHeatmap);
-    mapInstance.current.once('styledata', renderHeatmap);
-    mapInstance.current.once('idle', renderHeatmap);
+    if (mapInstance.current.isStyleLoaded()) {
+      renderHeatmap();
+    } else {
+      mapInstance.current.once('style.load', renderHeatmap);
+    }
   }, [filteredReports]);
 
   const toggle3DMode = () => {

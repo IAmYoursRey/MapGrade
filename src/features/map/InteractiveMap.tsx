@@ -7,88 +7,18 @@ import { useAuthStore, isDevUser as checkIsDevUser, hasMapMarkPermission } from 
 import { Layers, X, MapPin, Globe } from 'lucide-react';
 import { setupMapLayers } from './setupMapLayers';
 
-const MAP_STYLES: Record<string, { style: any; label: string }> = {
+const MAP_STYLES: Record<string, { style: string; label: string }> = {
   dark: {
     label: '🌙 Mode Gelap',
-    style: {
-      version: 8,
-      glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
-      sources: {
-        'carto-dark': {
-          type: 'raster',
-          tiles: [
-            'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
-            'https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
-            'https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
-            'https://d.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'
-          ],
-          tileSize: 256,
-          attribution: '&copy; OpenStreetMap &copy; CARTO'
-        }
-      },
-      layers: [
-        {
-          id: 'carto-dark-layer',
-          type: 'raster',
-          source: 'carto-dark',
-          minzoom: 0,
-          maxzoom: 19
-        }
-      ]
-    }
+    style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
   },
   streets: {
     label: '🗺️ Mode Jalan',
-    style: {
-      version: 8,
-      glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
-      sources: {
-        'osm-tiles': {
-          type: 'raster',
-          tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-          tileSize: 256,
-          attribution: '&copy; OpenStreetMap'
-        }
-      },
-      layers: [
-        {
-          id: 'osm-layer',
-          type: 'raster',
-          source: 'osm-tiles',
-          minzoom: 0,
-          maxzoom: 19
-        }
-      ]
-    }
+    style: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json'
   },
   satellite: {
     label: '🛰️ Mode Terang',
-    style: {
-      version: 8,
-      glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
-      sources: {
-        'carto-light': {
-          type: 'raster',
-          tiles: [
-            'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
-            'https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
-            'https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
-            'https://d.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png'
-          ],
-          tileSize: 256,
-          attribution: '&copy; OpenStreetMap &copy; CARTO'
-        }
-      },
-      layers: [
-        {
-          id: 'carto-light-layer',
-          type: 'raster',
-          source: 'carto-light',
-          minzoom: 0,
-          maxzoom: 19
-        }
-      ]
-    }
+    style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json'
   }
 };
 
