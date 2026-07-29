@@ -1,5 +1,5 @@
 import * as maplibregl from 'maplibre-gl';
-import { Report } from '@/store/useMapStore';
+import { useMapStore, Report } from '@/store/useMapStore';
 
 const SOURCE_ID = 'gosiaga-reports-source';
 
@@ -120,18 +120,18 @@ const addLayers = (map: maplibregl.Map, geojson: GeoJSON.FeatureCollection, isHe
 };
 
 export const setupMapLayers = (
-  map: maplibregl.Map,
+  map: any,
   reports: Report[],
   onReportClick?: (report: Report) => void,
   isHeatmapMode = false
 ) => {
-  const geojson = buildGeoJSON(reports);
+  map.__latestGeoJSON = buildGeoJSON(reports);
 
   const doAdd = () => {
     try {
-      addLayers(map, geojson, isHeatmapMode);
+      addLayers(map, map.__latestGeoJSON, isHeatmapMode);
     } catch (err) {
-      console.warn('[setupMapLayers] addLayers failed, will retry on style.load:', err);
+      console.warn('[setupMapLayers] addLayers failed:', err);
     }
   };
 
@@ -141,11 +141,11 @@ export const setupMapLayers = (
 
   map.once('style.load', () => {
     try {
-      addLayers(map, geojson, isHeatmapMode);
+      doAdd();
     } catch (_) {}
   });
 
-  const handlePointClick = (e: maplibregl.MapMouseEvent & { features?: maplibregl.MapGeoJSONFeature[] }) => {
+  const handlePointClick = (e: any) => {
     const layersToQuery: string[] = [];
     try { if (map.getLayer('unclustered-point')) layersToQuery.push('unclustered-point'); } catch (_) {}
     try { if (map.getLayer('unclustered-glow')) layersToQuery.push('unclustered-glow'); } catch (_) {}
@@ -167,13 +167,14 @@ export const setupMapLayers = (
   map.on('mouseleave', 'unclustered-point', () => { try { map.getCanvas().style.cursor = ''; } catch (_) {} });
 };
 
-export const updateMapData = (map: maplibregl.Map, reports: Report[]) => {
+export const updateMapData = (map: any, reports: Report[]) => {
   const geojson = buildGeoJSON(reports);
+  map.__latestGeoJSON = geojson;
+
   try {
-    const source = map.getSource(SOURCE_ID) as maplibregl.GeoJSONSource;
+    const source = map.getSource(SOURCE_ID);
     if (source) {
       source.setData(geojson);
-      return;
     }
   } catch (_) {}
 };
