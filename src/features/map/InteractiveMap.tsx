@@ -7,18 +7,85 @@ import { useAuthStore, isDevUser as checkIsDevUser, hasMapMarkPermission } from 
 import { Layers, X, MapPin, Globe } from 'lucide-react';
 import { setupMapLayers } from './setupMapLayers';
 
-const MAP_STYLES: Record<string, { style: string; label: string }> = {
+const MAP_STYLES: Record<string, { style: any; label: string }> = {
   dark: {
     label: '🌙 Mode Gelap',
-    style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
+    style: {
+      version: 8,
+      sources: {
+        'carto-dark': {
+          type: 'raster',
+          tiles: [
+            'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+            'https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+            'https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+            'https://d.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'
+          ],
+          tileSize: 256,
+          attribution: '&copy; OpenStreetMap &copy; CARTO'
+        }
+      },
+      layers: [
+        {
+          id: 'carto-dark-layer',
+          type: 'raster',
+          source: 'carto-dark',
+          minzoom: 0,
+          maxzoom: 19
+        }
+      ]
+    }
   },
   streets: {
     label: '🗺️ Mode Jalan',
-    style: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json'
+    style: {
+      version: 8,
+      sources: {
+        'osm-tiles': {
+          type: 'raster',
+          tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+          tileSize: 256,
+          attribution: '&copy; OpenStreetMap'
+        }
+      },
+      layers: [
+        {
+          id: 'osm-layer',
+          type: 'raster',
+          source: 'osm-tiles',
+          minzoom: 0,
+          maxzoom: 19
+        }
+      ]
+    }
   },
   satellite: {
     label: '🛰️ Mode Terang',
-    style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json'
+    style: {
+      version: 8,
+      sources: {
+        'carto-light': {
+          type: 'raster',
+          tiles: [
+            'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+            'https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+            'https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+            'https://d.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png'
+          ],
+          tileSize: 256,
+          attribution: '&copy; OpenStreetMap &copy; CARTO'
+        }
+      },
+      layers: [
+        {
+          id: 'carto-light-layer',
+          type: 'raster',
+          source: 'carto-light',
+          minzoom: 0,
+          maxzoom: 19
+        }
+      ]
+    }
   }
 };
 
