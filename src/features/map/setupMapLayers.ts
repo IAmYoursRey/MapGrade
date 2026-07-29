@@ -126,12 +126,18 @@ export const setupMapLayers = (
   isHeatmapMode = false
 ) => {
   map.__latestGeoJSON = buildGeoJSON(reports);
+  map.__isHeatmapMode = isHeatmapMode;
 
   const doAdd = () => {
     try {
-      addLayers(map, map.__latestGeoJSON, isHeatmapMode);
+      if (!map.isStyleLoaded()) return;
+      if (!map.getSource(SOURCE_ID)) {
+        addLayers(map, map.__latestGeoJSON, map.__isHeatmapMode);
+      } else {
+        map.getSource(SOURCE_ID).setData(map.__latestGeoJSON);
+      }
     } catch (err) {
-      console.warn('[setupMapLayers] addLayers failed:', err);
+      console.warn('[setupMapLayers] doAdd failed:', err);
     }
   };
 
@@ -139,11 +145,12 @@ export const setupMapLayers = (
     doAdd();
   }
 
-  map.once('style.load', () => {
-    try {
-      doAdd();
-    } catch (_) {}
-  });
+  const onStyleLoad = () => { try { doAdd(); } catch (_) {} };
+  map.on('style.load', onStyleLoad);
+  
+  // As a massive fallback for Vercel production edge cases, re-check on 'load' and 'idle'
+  const onLoad = () => { try { doAdd(); } catch (_) {} };
+  map.on('load', onLoad);
 
   const handlePointClick = (e: any) => {
     const layersToQuery: string[] = [];
@@ -162,9 +169,20 @@ export const setupMapLayers = (
     } catch (_) {}
   };
 
+  const onMouseEnter = () => { try { map.getCanvas().style.cursor = 'pointer'; } catch (_) {} };
+  const onMouseLeave = () => { try { map.getCanvas().style.cursor = ''; } catch (_) {} };
+
   map.on('click', handlePointClick);
-  map.on('mouseenter', 'unclustered-point', () => { try { map.getCanvas().style.cursor = 'pointer'; } catch (_) {} });
-  map.on('mouseleave', 'unclustered-point', () => { try { map.getCanvas().style.cursor = ''; } catch (_) {} });
+  map.on('mouseenter', 'unclustered-point', onMouseEnter);
+  map.on('mouseleave', 'unclustered-point', onMouseLeave);
+
+  return () => {
+    map.off('style.load', onStyleLoad);
+    map.off('load', onLoad);
+    map.off('click', handlePointClick);
+    map.off('mouseenter', 'unclustered-point', onMouseEnter);
+    map.off('mouseleave', 'unclustered-point', onMouseLeave);
+  };
 };
 
 export const updateMapData = (map: any, reports: Report[]) => {
@@ -172,9 +190,12 @@ export const updateMapData = (map: any, reports: Report[]) => {
   map.__latestGeoJSON = geojson;
 
   try {
+    if (!map.isStyleLoaded()) return;
     const source = map.getSource(SOURCE_ID);
     if (source) {
       source.setData(geojson);
+    } else {
+      addLayers(map, geojson, map.__isHeatmapMode || false);
     }
   } catch (_) {}
 };

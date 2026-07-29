@@ -162,9 +162,6 @@ export const InteractiveMap: React.FC = () => {
 
     const targetStyle = MAP_STYLES[activeLayer]?.style || MAP_STYLES.dark.style;
     map.setStyle(targetStyle);
-
-    const currentReports = useMapStore.getState().reports || [];
-    setupMapLayers(map, currentReports, onReportClick, false);
   }, [activeLayer]);
 
   useEffect(() => {
