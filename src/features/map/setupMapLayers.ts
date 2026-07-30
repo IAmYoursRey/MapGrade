@@ -3,6 +3,29 @@ import { useMapStore, Report } from '@/store/useMapStore';
 
 const SOURCE_ID = 'gosiaga-reports-source';
 
+const calculateSeverity = (r: Report): number => {
+  let score = 0.2; // Biru Muda (dampak kecil)
+  
+  if (r.casualties !== undefined && r.casualties > 0) {
+    if (r.casualties >= 5) score = 1.0; // Merah (parah)
+    else score = 0.5; // Kuning (sedang)
+  }
+  
+  if (r.damage) {
+    const d = r.damage.toLowerCase();
+    if (d.includes('berat') || d.includes('parah') || d.includes('hancur') || d.includes('putus') || d.includes('roboh')) {
+      score = 1.0;
+    } else if (d.includes('sedang') || d.includes('lumayan')) {
+      score = Math.max(score, 0.5);
+    }
+  }
+
+  if ((r.validationsCount || 0) >= 15) score = Math.max(score, 0.5);
+  if ((r.validationsCount || 0) >= 30) score = 1.0;
+
+  return score;
+};
+
 const buildGeoJSON = (reports: Report[]): GeoJSON.FeatureCollection => ({
   type: 'FeatureCollection',
   features: (reports || []).map((r) => {
@@ -22,6 +45,7 @@ const buildGeoJSON = (reports: Report[]): GeoJSON.FeatureCollection => ({
         title: r.title || 'Laporan',
         status: r.status || 'UNVERIFIED',
         validationsCount: Math.max(1, r.validationsCount || 1),
+        severityScore: calculateSeverity(r),
         reportData: JSON.stringify(r)
       }
     };
@@ -52,15 +76,14 @@ const addLayers = (map: maplibregl.Map, geojson: GeoJSON.FeatureCollection, isHe
       source: SOURCE_ID,
       maxzoom: 16,
       paint: {
-        'heatmap-weight': 1,
+        'heatmap-weight': ['get', 'severityScore'],
         'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 0, 1, 6, 2, 12, 3],
         'heatmap-color': [
           'interpolate', ['linear'], ['heatmap-density'],
           0, 'rgba(0,0,0,0)',
-          0.2, 'rgba(59,130,246,0.85)',
-          0.4, 'rgba(245,158,11,0.90)',
-          0.7, 'rgba(239,68,68,0.95)',
-          1.0, 'rgba(255,255,255,1)'
+          0.2, 'rgba(56,189,248,0.85)',
+          0.5, 'rgba(250,204,21,0.90)',
+          1.0, 'rgba(239,68,68,0.95)'
         ],
         'heatmap-radius': [
           'interpolate', ['linear'], ['zoom'],
