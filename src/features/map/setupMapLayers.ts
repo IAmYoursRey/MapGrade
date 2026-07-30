@@ -62,7 +62,15 @@ const addLayers = (map: maplibregl.Map, geojson: GeoJSON.FeatureCollection, isHe
           0.7, 'rgba(239,68,68,0.95)',
           1.0, 'rgba(255,255,255,1)'
         ],
-        'heatmap-radius': ['interpolate', ['exponential', 1.4], ['zoom'], 0, 10, 4, 20, 7, 35, 10, 50, 14, 75],
+        'heatmap-radius': [
+          'interpolate', ['linear'], ['zoom'],
+          0, 2,      
+          5, 4,      
+          8, 10,     
+          11, 25,    
+          14, 60,    
+          17, 120    
+        ],
         'heatmap-opacity': 0.9
       }
     });
